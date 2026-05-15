@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一建《管理》刷题系统 · 全10章</title>
+<style>
+  :root {
+    --bg: #1a1d23;
+    --card: #232830;
+    --card-hover: #2a2f38;
+    --border: #2e3440;
+    --primary: #4a9eff;
+    --primary-dark: #3a7ecc;
+    --correct: #52c41a;
+    --wrong: #ff4d4f;
+    --warn: #faad14;
+    --text: #e8eaf0;
+    --text-light: #8b919a;
+    --text-dim: #555b66;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ===== 英雄区 ===== */
+  .hero {
+    max-width: 900px;
+    margin: 60px auto 50px;
+    padding: 0 24px;
+    text-align: center;
+  }
+
+  .hero-icon {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 20px;
+    display: block;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .hero-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+
+  .hero-title em {
+    color: var(--primary);
+    font-style: normal;
+  }
+
+  .hero-desc {
+    font-size: 15px;
+    color: var(--text-light);
+    max-width: 520px;
+    margin: 0 auto 40px;
+  }
+
+  /* ===== 章节网格 ===== */
+  .chapters-section {
+    max-width: 900px;
+    margin: 0 auto 60px;
+    padding: 0 24px;
+  }
+
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .chapters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .chapter-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 20px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .chapter-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), #6ec6ff);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  .chapter-card:hover:not(.locked) {
+    border-color: var(--primary);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(74, 158, 255, 0.15);
+  }
+
+  .chapter-card:hover:not(.locked)::before {
+    opacity: 1;
+  }
+
+  .chapter-card.locked {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  .chapter-card.locked:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .chapter-num {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .chapter-num.active {
+    background: rgba(74, 158, 255, 0.15);
+    color: var(--primary);
+  }
+
+  .chapter-num.locked {
+    background: rgba(85, 91, 102, 0.2);
+    color: var(--text-dim);
+  }
+
+  .chapter-num-n {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dim);
+  }
+
+  .status-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .status-pill.active {
+    background: rgba(82, 196, 26, 0.15);
+    color: var(--correct);
+    border: 1px solid rgba(82, 196, 26, 0.3);
+  }
+
+  .status-pill.locked {
+    background: rgba(85, 91, 102, 0.15);
+    color: var(--text-dim);
+    border: 1px solid rgba(85, 91, 102, 0.2);
+  }
+
+  .chapter-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+
+  .chapter-card.locked .chapter-title {
+    color: var(--text-dim);
+  }
+
+  .chapter-meta {
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  .chapter-card.locked .chapter-meta {
+    color: var(--text-dim);
+  }
+
+  .chapter-arrow {
+    position: absolute;
+    right: 20px;
+    bottom: 24px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(74, 158, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+
+  .chapter-card:hover:not(.locked) .chapter-arrow {
+    background: var(--primary);
+    color: #fff;
+    transform: translateX(2px);
+  }
+
+  .chapter-card.locked .chapter-arrow {
+    background: rgba(85, 91, 102, 0.1);
+    color: var(--text-dim);
+  }
+
+  /* ===== 特色功能 ===== */
+  .features-section {
+    max-width: 900px;
+    margin: 0 auto 60px;
+    padding: 0 24px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+
+  .feature-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+
+  .feature-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .feature-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .feature-desc {
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  /* ===== 底部 ===== */
+  .footer {
+    text-align: center;
+    padding: 30px 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 480px) {
+    .hero-title { font-size: 24px; }
+    .top-inner { flex-direction: column; align-items: flex-start; }
+    .chapters-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 英雄区 -->
+<div class="hero">
+  <svg class="hero-icon" viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="orbGrad" cx="40%" cy="35%" r="60%">
+        <stop offset="0%" stop-color="#7ec8ff"/>
+        <stop offset="40%" stop-color="#4a9eff"/>
+        <stop offset="100%" stop-color="#1a5faa"/>
+      </radialGradient>
+      <radialGradient id="orbGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#4a9eff" stop-opacity="0.6"/>
+        <stop offset="100%" stop-color="#4a9eff" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="coreGrad" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="60%" stop-color="#a8d8ff"/>
+        <stop offset="100%" stop-color="#4a9eff"/>
+      </radialGradient>
+      <filter id="orbBlur">
+        <feGaussianBlur stdDeviation="4" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- 外层大光环 -->
+    <ellipse cx="44" cy="44" rx="40" ry="12" fill="none" stroke="url(#orbGrad)" stroke-width="1.5" opacity="0.3"/>
+    <ellipse cx="44" cy="44" rx="40" ry="12" fill="none" stroke="#4a9eff" stroke-width="0.8" opacity="0.5"
+      stroke-dasharray="6 4" stroke-dashoffset="0">
+      <animateTransform attributeName="transform" type="rotate"
+        from="0 44 44" to="360 44 44" dur="8s" repeatCount="indefinite"/>
+    </ellipse>
+
+    <!-- 中层椭圆轨道 -->
+    <ellipse cx="44" cy="44" rx="30" ry="9" fill="none" stroke="url(#orbGrad)" stroke-width="1" opacity="0.2" transform="rotate(60 44 44)"/>
+    <ellipse cx="44" cy="44" rx="30" ry="9" fill="none" stroke="#6ec6ff" stroke-width="0.8" opacity="0.4" transform="rotate(60 44 44)"
+      stroke-dasharray="4 5" stroke-dashoffset="0">
+      <animateTransform attributeName="transform" type="rotate"
+        from="60 44 44" to="420 44 44" dur="12s" repeatCount="indefinite"/>
+    </ellipse>
+
+    <!-- 内层椭圆轨道 -->
+    <ellipse cx="44" cy="44" rx="20" ry="6" fill="none" stroke="url(#orbGrad)" stroke-width="0.8" opacity="0.2" transform="rotate(-30 44 44)"/>
+    <ellipse cx="44" cy="44" rx="20" ry="6" fill="none" stroke="#a8d8ff" stroke-width="0.8" opacity="0.4" transform="rotate(-30 44 44)"
+      stroke-dasharray="3 4">
+      <animateTransform attributeName="transform" type="rotate"
+        from="-30 44 44" to="330 44 44" dur="6s" repeatCount="indefinite"/>
+    </ellipse>
+
+    <!-- 外发光层 -->
+    <circle cx="44" cy="44" r="20" fill="url(#orbGlow)" filter="url(#orbBlur)">
+      <animate attributeName="r" values="18;22;18" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- 主体光球 -->
+    <circle cx="44" cy="44" r="16" fill="url(#orbGrad)" filter="url(#glow)"/>
+
+    <!-- 光球顶部高光 -->
+    <ellipse cx="38" cy="36" rx="6" ry="4" fill="rgba(255,255,255,0.5)" transform="rotate(-20 38 36)"/>
+    <ellipse cx="40" cy="38" rx="3" ry="2" fill="rgba(255,255,255,0.7)"/>
+
+    <!-- 核心白点 -->
+    <circle cx="44" cy="44" r="5" fill="url(#coreGrad)" opacity="0.9"/>
+
+    <!-- 打勾符号（表示通过考试） -->
+    <path d="M39 44 L42 47 L49 40" fill="none" stroke="white" stroke-width="2.2"
+      stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+
+    <!-- 浮动粒子 -->
+    <circle cx="20" cy="28" r="2" fill="#4a9eff" opacity="0.7">
+      <animate attributeName="cy" values="28;24;28" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="68" cy="30" r="1.5" fill="#6ec6ff" opacity="0.6">
+      <animate attributeName="cy" values="30;26;30" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0.9;0.6" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="16" cy="56" r="1.5" fill="#a8d8ff" opacity="0.5">
+      <animate attributeName="cy" values="56;52;56" dur="3.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="72" cy="60" r="2" fill="#4a9eff" opacity="0.6">
+      <animate attributeName="cy" values="60;56;60" dur="4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0.9;0.6" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="60" cy="18" r="1.5" fill="#ffffff" opacity="0.5">
+      <animate attributeName="cy" values="18;14;18" dur="2.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="28" cy="68" r="1.5" fill="#6ec6ff" opacity="0.5">
+      <animate attributeName="cy" values="68;64;68" dur="3.2s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- 顶部光芒 -->
+    <line x1="44" y1="10" x2="44" y2="18" stroke="#4a9eff" stroke-width="1.5" opacity="0.5" stroke-linecap="round">
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2s" repeatCount="indefinite"/>
+    </line>
+    <line x1="30" y1="14" x2="34" y2="20" stroke="#6ec6ff" stroke-width="1" opacity="0.4" stroke-linecap="round">
+      <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.3s" repeatCount="indefinite"/>
+    </line>
+    <line x1="58" y1="14" x2="54" y2="20" stroke="#6ec6ff" stroke-width="1" opacity="0.4" stroke-linecap="round">
+      <animate attributeName="opacity" values="0.2;0.6;0.2" dur="1.8s" repeatCount="indefinite"/>
+    </line>
+  </svg>
+  <h1 class="hero-title">一建《管理》章节刷题系统（第二轮）</h1>
+  <p class="hero-desc">
+    基于2026年新教材原文编写，逐题配备详细解析，涵盖全10章核心考点，
+    断点续做 · 智能计分 · 错题重做，助力通关。
+  </p>
+</div>
+
+<!-- 章节列表 -->
+<div class="chapters-section">
+  <div class="section-label">📋 章节索引</div>
+  <div class="chapters-grid">
+
+    <!-- 第一章 · 已上线 -->
+    <a class="chapter-card" href="./demo_quiz.html">
+      <div class="card-top">
+        <div class="chapter-num active">01</div>
+        <div class="status-pill active">✅ 已上线</div>
+      </div>
+      <div class="chapter-title">建设工程项目组织、规划与控制</div>
+      <div class="chapter-meta">第1章 · 已上线 40 题</div>
+      <div class="chapter-arrow">→</div>
+    </a>
+
+    <!-- 第二章 -->
+    <div class="chapter-card locked">
+      <div class="card-top">
+        <div class="chapter-num locked">02</div>
+        <div class="status-pill locked">🔒 敬请期待</div>
+      </div>
+      <div class="chapter-title">建设工程项目管理相关体系标准</div>
+      <div class="chapter-meta">第2章 · 即将上线</div>
+      <div class="chapter-arrow">→</div>
+    </div>
+
+    <!-- 第三章 -->
+    <div class="chapter-card locked">
+      <div class="card-top">
+        <div class="chapter-num locked">03</div>
+        <div class="status-pill locked">🔒 敬请期待</div>
+      </div>
+      <div class="chapter-title">建设工程招标投标与合同管理</div>
+      <div class="chapter-meta">第3章 · 即将上线</div>
+      <div class="chapter-arrow">→</div>
+    </div>
+
+    <!-- 第四章 -->
+    <div class="chapter-card locked">
+      <div class="card-top">
+        <div class="chapter-num locked">04</div>
+        <div class="status-pill locked">🔒 敬请期待</div>
+      </div>
+      <div class="chapter-title">建设工程进度管理</div>
+      <div class="chapter-meta">第4章 · 即将上线</div>
+      <div class="chapter-arrow">→</div>
+    </div>
+
+    <!-- 第五章 -->
+    <div class="chapter-card locked">
+      <div class="card-top">
+        <div class="chapter-num locked">05</div>
+        <div class="status-pill locked">🔒 敬请期待</div>
+      </div>
+      <div class="chapter-title">建设工程质量管理</div>
+      <div class="chapter-meta">第5章 · 即将上线</div>
+      <div class="chapter-arrow">→</div>
+    </div>
+
+    <!-- 第六章 -->
+    <div class="chapter-card locked">
+      <div class="card-top">
+        <div class="chapter-num locked">06</div>
+        <div class="status-pill locked">🔒 敬请期待</div>
+      </div>
+      <div class="chapter-title">建设工程成本管理</div>
+      <div class="chapter-meta">第6章 · 即将上线</div>
+      <div class="chapter-arrow">→</div>
+    </div>
+
+    <!-- 第七章 -->
+    <div class="chapter-card locked">
+      <div class="card-top">
+        <div class="chapter-num locked">07</div>
+        <div class="status-pill locked">🔒 敬请期待</div>
+      </div>
+      <div class="chapter-title">建设工程施工安全管理</div>
+      <div class="chapter-meta">第7章 · 即将上线</div>
+      <div class="chapter-arrow">→</div>
+    </div>
+
+    <!-- 第八章 -->
+    <div class="chapter-card locked">
+      <div class="card-top">
+        <div class="chapter-num locked">08</div>
+        <div class="status-pill locked">🔒 敬请期待</div>
+      </div>
+      <div class="chapter-title">绿色建造及施工现场环境管理</div>
+      <div class="chapter-meta">第8章 · 即将上线</div>
+      <div class="chapter-arrow">→</div>
+    </div>
+
+    <!-- 第九章 -->
+    <div class="chapter-card locked">
+      <div class="card-top">
+        <div class="chapter-num locked">09</div>
+        <div class="status-pill locked">🔒 敬请期待</div>
+      </div>
+      <div class="chapter-title">国际工程承包管理</div>
+      <div class="chapter-meta">第9章 · 即将上线</div>
+      <div class="chapter-arrow">→</div>
+    </div>
+
+    <!-- 第十章 -->
+    <div class="chapter-card locked">
+      <div class="card-top">
+        <div class="chapter-num locked">10</div>
+        <div class="status-pill locked">🔒 敬请期待</div>
+      </div>
+      <div class="chapter-title">建设工程项目管理智能化</div>
+      <div class="chapter-meta">第10章 · 即将上线</div>
+      <div class="chapter-arrow">→</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 功能特色 -->
+<div class="features-section">
+  <div class="section-label">✨ 功能特色</div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">💾</span>
+      <div class="feature-name">断点续做</div>
+      <div class="feature-desc">意外关闭无缝恢复</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🎯</span>
+      <div class="feature-name">智能计分</div>
+      <div class="feature-desc">多选 0.5 分制精准</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📖</span>
+      <div class="feature-name">逐题解析</div>
+      <div class="feature-desc">教材原文 + 选项精析</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🔁</span>
+      <div class="feature-name">错题重做</div>
+      <div class="feature-desc">薄弱点针对性强化</div>
+    </div>
+  </div>
+</div>
+
+<!-- 底部 -->
+<div class="footer">
+  <p>2026 一建《建设工程项目管理》交互刷题系统</p>
+  <p style="margin-top:4px;">基于中国建筑工业出版社教材原文编写 · 全10章陆续上线中</p>
+</div>
+
+</body>
+</html>

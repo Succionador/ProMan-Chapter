@@ -1,0 +1,2842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一建管理 · 交互刷题系统</title>
+<style>
+  :root {
+    --bg: #1a1d23;
+    --card: #232830;
+    --card-hover: #2a2f38;
+    --border: #2e3440;
+    --primary: #4a9eff;
+    --primary-dark: #3a7ecc;
+    --correct: #52c41a;
+    --wrong: #ff4d4f;
+    --warn: #faad14;
+    --text: #e8eaf0;
+    --text-light: #8b919a;
+    --text-dim: #555b66;
+    --tag-single: #4a9eff;
+    --tag-multi: #a855f7;
+    --progress-bg: #2a2f38;
+    --dropdown-bg: #1e2228;
+    --dropdown-item-hover: #2a2f38;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ========== 顶部标题页 ========== */
+  .top-bar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .top-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .course-info {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .course-name {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .course-sub {
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  /* 进度条区域 */
+  .progress-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 280px;
+  }
+
+  .score-display {
+    font-size: 13px;
+    color: var(--text-light);
+    white-space: nowrap;
+  }
+
+  .score-display span {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .progress-track {
+    flex: 1;
+    height: 8px;
+    background: var(--progress-bg);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-dark), var(--primary));
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  /* 选题下拉框 */
+  .jump-area {
+    position: relative;
+  }
+
+  .jump-btn {
+    background: var(--dropdown-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .jump-btn:hover {
+    border-color: var(--primary);
+    background: var(--card-hover);
+  }
+
+  .jump-btn .arrow {
+    transition: transform 0.2s;
+    font-size: 10px;
+  }
+
+  .jump-btn.open .arrow {
+    transform: rotate(180deg);
+  }
+
+  .jump-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--dropdown-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    display: none;
+    z-index: 200;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    max-height: 380px;
+    overflow-y: auto;
+  }
+
+  .jump-dropdown.show {
+    display: grid;
+    grid-template-columns: repeat(5, 38px);
+    gap: 6px;
+  }
+
+  .jump-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+  }
+
+  .jump-item {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .jump-item:hover {
+    background: var(--dropdown-item-hover);
+    border-color: var(--border);
+  }
+
+  .jump-item.done {
+    background: rgba(82, 196, 26, 0.12);
+    color: var(--correct);
+    border-color: rgba(82, 196, 26, 0.3);
+  }
+
+  .jump-item.wrong {
+    background: rgba(255, 77, 79, 0.12);
+    color: var(--wrong);
+    border-color: rgba(255, 77, 79, 0.3);
+  }
+
+  .jump-item.current {
+    background: rgba(74, 158, 255, 0.15);
+    color: var(--primary);
+    border-color: rgba(74, 158, 255, 0.4);
+    font-weight: 700;
+  }
+
+  .jump-item.todo {
+    background: rgba(255,255,255,0.03);
+    color: var(--text-dim);
+    border-color: var(--border);
+  }
+
+  /* ========== 主内容区 ========== */
+  .main-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px 16px 100px;
+  }
+
+  /* 做题页面 */
+  .q-page {
+    display: none;
+  }
+
+  .q-page.active {
+    display: block;
+    animation: fadeIn 0.25s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 题目卡片 */
+  .q-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+
+  .q-meta {
+    display: flex;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .q-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .q-tag.single {
+    background: rgba(74, 158, 255, 0.15);
+    color: var(--tag-single);
+  }
+
+  .q-tag.multi {
+    background: rgba(168, 85, 247, 0.15);
+    color: var(--tag-multi);
+  }
+
+  .q-num {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .q-meta .q-confirm-btn {
+    margin-left: auto;
+    padding: 6px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #2a3a50;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .q-meta .q-confirm-btn:hover {
+    background: #2a3a50;
+  }
+
+  .q-meta .q-confirm-btn:disabled {
+    background: #2a3a50;
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+
+  /* 可用时：渐变 + 阴影，醒目 */
+  .q-meta .q-confirm-btn:not(:disabled) {
+    background: linear-gradient(135deg, #4a9eff 0%, #6ac6ff 100%);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(74,158,255,0.35);
+  }
+
+  .q-meta .q-confirm-btn:not(:disabled):hover {
+    background: linear-gradient(135deg, #3a7ecc 0%, #4a9eff 100%);
+    box-shadow: 0 4px 16px rgba(74,158,255,0.50);
+    transform: translateY(-1px);
+  }
+
+  .q-meta .q-nav-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--text-light);
+  }
+
+  .q-meta .q-nav-btn:hover {
+    border-color: var(--text-light);
+    color: var(--text);
+  }
+
+  .q-meta .q-nav-btn.hidden {
+    visibility: hidden;
+  }
+
+  .q-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.8;
+  }
+
+  .q-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+  }
+
+  /* 候选项 */
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .opt {
+    display: flex;
+    align-items: flex-start;
+    padding: 13px 15px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    background: rgba(255,255,255,0.02);
+  }
+
+  .opt:hover {
+    border-color: var(--primary);
+    background: rgba(74, 158, 255, 0.07);
+  }
+
+  .opt.selected {
+    border-color: var(--primary);
+    background: rgba(74, 158, 255, 0.12);
+  }
+
+  .opt.correct {
+    border-color: var(--correct) !important;
+    background: rgba(82, 196, 26, 0.12) !important;
+  }
+
+  .opt.wrong {
+    border-color: var(--wrong) !important;
+    background: rgba(255, 77, 79, 0.12) !important;
+  }
+
+  .opt.unselected-correct {
+    border-color: var(--correct) !important;
+    background: rgba(82, 196, 26, 0.12) !important;
+  }
+
+  .opt.letter {
+    min-width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--progress-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    margin-right: 12px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    transition: all 0.2s;
+    color: var(--text-light);
+  }
+
+  /* 选中时/正确/错误状态下，ABCD圆形始终保持默认灰色，不随状态变色 */
+  .opt.selected .letter,
+  .opt.correct .letter,
+  .opt.wrong .letter,
+  .opt.unselected-correct .letter {
+    /* 保持默认灰色，不变色 */
+  }
+
+  .opt-text {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.7;
+    flex: 1;
+  }
+
+  /* 得分条 */
+  .score-bar {
+    display: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .score-bar.show {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .score-bar.full {
+    background: rgba(82, 196, 26, 0.15);
+    color: var(--correct);
+    border: 1px solid rgba(82, 196, 26, 0.3);
+  }
+
+  .score-bar.partial {
+    background: rgba(250, 173, 20, 0.15);
+    color: var(--warn);
+    border: 1px solid rgba(250, 173, 20, 0.3);
+  }
+
+  .score-bar.wrong {
+    background: rgba(255, 77, 79, 0.15);
+    color: var(--wrong);
+    border: 1px solid rgba(255, 77, 79, 0.3);
+  }
+
+  /* ========== 答案解析 ========== */
+  .analysis {
+    display: none;
+    margin-top: 20px;
+  }
+
+  .analysis.show {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .ans-section {
+    background: #fafafa;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    border-left: 4px solid var(--primary);
+  }
+
+  .ans-section h3 {
+    font-size: 14px;
+    color: #4a9eff;
+    margin-bottom: 6px;
+  }
+
+  .ans-section .ca {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--correct);
+  }
+
+  .opt-analysis {
+    background: #fafafa;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    padding: 13px 15px;
+    margin-bottom: 10px;
+  }
+
+  .opt-analysis h4 {
+    font-size: 13px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .opt-analysis h4 .tag {
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  .tag-correct {
+    background: #f6ffed;
+    color: var(--correct);
+    border: 1px solid #b7eb8f;
+  }
+
+  .tag-wrong {
+    background: #fff2f0;
+    color: var(--wrong);
+    border: 1px solid #ffa39e;
+  }
+
+  .opt-analysis p {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.8;
+  }
+
+  .kb-section {
+    background: #fff8e6;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-top: 14px;
+    border-left: 4px solid var(--warn);
+  }
+
+  .kb-section h3 {
+    font-size: 14px;
+    color: #b7791f;
+    margin-bottom: 10px;
+  }
+
+  .kb-section p, .kb-section li {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.8;
+  }
+
+  .kb-section ul {
+    padding-left: 18px;
+  }
+
+  .kb-section li {
+    margin-bottom: 4px;
+  }
+
+  .kb-section .page-ref {
+    font-size: 12px;
+    color: #999;
+    background: #f5f5f5;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 8px;
+  }
+
+  /* ========== 交卷汇总页 ========== */
+  .summary-page {
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+  }
+
+  .summary-page.active {
+    display: block;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .summary-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+  }
+
+  .summary-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  #summaryScore {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--primary);
+    margin: 12px 0;
+  }
+
+  #summaryScore .total {
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--text-light);
+  }
+
+  #summaryRounds {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  #summaryRoundTag {
+    font-size: 12px;
+    color: var(--warn);
+    background: rgba(250, 173, 20, 0.12);
+    border: 1px solid rgba(250, 173, 20, 0.3);
+    border-radius: 20px;
+    padding: 2px 12px;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+
+  .round-badge {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    color: var(--text-light);
+  }
+
+  .summary-msg {
+    font-size: 14px;
+    color: var(--text-light);
+    margin-bottom: 28px;
+  }
+
+  .btn-redo {
+    background: var(--card);
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    padding: 12px 32px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 30px;
+    transition: all 0.2s;
+  }
+
+  .btn-redo:hover {
+    background: rgba(74, 158, 255, 0.1);
+  }
+
+  .wrong-list-title {
+    text-align: left;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+    padding: 0 4px;
+  }
+
+  .wrong-list {
+    text-align: left;
+  }
+
+  .wrong-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .wrong-item:hover {
+    border-color: var(--primary);
+    background: var(--card-hover);
+  }
+
+  .wrong-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .wrong-item-num {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wrong);
+  }
+
+  .wrong-item-tag {
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: rgba(168, 85, 247, 0.15);
+    color: var(--tag-multi);
+  }
+
+  .wrong-item-tag.single {
+    background: rgba(74, 158, 255, 0.15);
+    color: var(--tag-single);
+  }
+
+  .wrong-item-text {
+    font-size: 13px;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .wrong-item-detail {
+    display: none;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .wrong-item-detail.show {
+    display: block;
+  }
+
+  .wrong-item-detail .q-text {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .wrong-item-detail .options {
+    gap: 8px;
+  }
+
+  .wrong-item-detail .opt {
+    padding: 10px 12px;
+  }
+
+  .wrong-item-detail .opt-text {
+    font-size: 13px;
+  }
+
+  .wrong-item-ans {
+    margin-top: 12px;
+    background: rgba(255,77,79,0.1);
+    border: 1px solid rgba(255,77,79,0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    text-align: left;
+  }
+
+  .wrong-item-ans p {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-bottom: 3px;
+  }
+
+  .wrong-item-ans .ca {
+    color: var(--correct);
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .no-wrong {
+    color: var(--text-dim);
+    font-size: 14px;
+    padding: 30px 0;
+  }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 480px) {
+    .top-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .progress-area { min-width: 100%; width: 100%; }
+    .q-card { padding: 18px 16px; }
+    .q-text { font-size: 15px; }
+  }
+
+  /* ========== 断点续做模态框 ========== */
+  .resume-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .resume-modal.show { display: flex; }
+  .resume-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .resume-box h2 { font-size: 20px; margin-bottom: 12px; color: var(--text); }
+  .resume-box p { color: var(--text-light); font-size: 14px; margin-bottom: 8px; }
+  .resume-stats {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 16px;
+    margin: 20px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .resume-stat { text-align: center; }
+  .resume-stat .num { font-size: 24px; font-weight: 700; color: var(--primary); }
+  .resume-stat .label { font-size: 12px; color: var(--text-light); }
+  .resume-btn-group { display: flex; gap: 12px; margin-top: 20px; }
+  .resume-btn {
+    flex: 1;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .resume-btn.primary {
+    background: var(--primary);
+    color: #fff;
+  }
+  .resume-btn.primary:hover { background: var(--primary-dark); }
+  .resume-btn.secondary {
+    background: var(--bg);
+    color: var(--text-light);
+    border: 1px solid var(--border);
+  }
+  .resume-btn.secondary:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* 顶部恢复进度按钮 */
+  .top-resume-btn {
+    background: linear-gradient(135deg, #52c41a, #389e0d);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .top-resume-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(82,196,26,0.3); }
+  .top-resume-btn.show { display: flex; }
+</style>
+</head>
+<body>
+
+<!-- 顶部标题页 -->
+<div class="top-bar">
+  <div class="top-inner">
+    <div class="course-info">
+      <div class="course-name">2026 一建《项目管理》刷题系统</div>
+      <div class="course-sub">第一章 · 工程项目投资管理与实施</div>
+    </div>
+    <button class="top-resume-btn" id="topResumeBtn" onclick="showResumeModal()">
+      📂 恢复进度
+    </button>
+    <div class="progress-area">
+      <div class="score-display">得分 <span id="scoreDisplay">0</span></div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+    <div class="jump-area">
+      <button class="jump-btn" id="jumpBtn" onclick="toggleJump()">
+        <span>选题跳转</span>
+        <span class="arrow">▼</span>
+      </button>
+      <div class="jump-dropdown" id="jumpDropdown"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 断点续做模态框 -->
+<div class="resume-modal" id="resumeModal">
+  <div class="resume-box">
+    <h2>📂 发现未完成的进度</h2>
+    <p>您上次练习到第 <strong id="resumeQNum">0</strong> 题</p>
+    <div class="resume-stats">
+      <div class="resume-stat">
+        <div class="num" id="resumeDone">0</div>
+        <div class="label">已完成</div>
+      </div>
+      <div class="resume-stat">
+        <div class="num" id="resumeScore">0</div>
+        <div class="label">当前得分</div>
+      </div>
+      <div class="resume-stat">
+        <div class="num" id="resumeWrong">0</div>
+        <div class="label">错题数</div>
+      </div>
+    </div>
+    <div class="resume-btn-group">
+      <button class="resume-btn secondary" onclick="startFresh()">重新开始</button>
+      <button class="resume-btn primary" onclick="resumeProgress()">继续练习</button>
+    </div>
+  </div>
+</div>
+
+<!-- 主内容区 -->
+<div class="main-content" id="mainContent">
+
+  <!-- ========== 做题页（由JS动态生成） ========== -->
+
+</div>
+
+<script>
+// ===================== 题目数据 =====================
+// 字段说明：
+// type: "single" | "multi"
+// answer: 单选为字符串("A")，多选为数组(["A","B"])
+// score: 该题得分(显示用)
+// ==================== 一建第二轮章节习题 共40题 ====================
+// 整理自教材原文，所有答案均依据教材确定
+
+const QUESTIONS_40 = [
+  // ===== Q1 (第9页) =====
+  {
+    id: 1, type: "multi",
+    text: "任何一个工程项目从构思策划到建成投入使用，均需要经过（　）阶段。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "投资决策" },
+      { key: "B", text: "建设实施" },
+      { key: "C", text: "运营维护" },
+      { key: "D", text: "生产准备" },
+      { key: "E", text: "项目建议书" }
+    ],
+    answer: ["A", "B"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B",
+      page_ref: "教材第1页",
+      kb: "教材原文：'任何一个工程项目从构思策划到建成投入使用，均需要经过投资决策和建设实施两大阶段。'E选项'项目建议书'是投资决策阶段的工作文件，而非阶段本身。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文明确指出工程项目需经过投资决策和建设实施两大阶段。A正确。" },
+        { key: "B", correct: true,  analysis: "教材原文明确指出工程项目需经过投资决策和建设实施两大阶段。B正确。" },
+        { key: "C", correct: false, analysis: "'运营维护'属于工程全寿命期（包含建成后运营维护），而非工程项目寿命期（仅包含投资决策和建设实施）。C不符合题意。" },
+        { key: "D", correct: false, analysis: "'生产准备'是建设实施阶段结束前的准备工作，属于建设实施的一部分，不是独立的阶段。D不符合题意。" },
+        { key: "E", correct: false, analysis: "'项目建议书'是投资决策阶段的工作文件，不是独立的阶段。E不符合题意。" }
+      ]
+    }
+  },
+
+  // ===== Q2 (第10-11页) =====
+  {
+    id: 2, type: "multi",
+    text: "下列有关项目资本金制度的说法，错误的是（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "对资本市场的投资者来说项目资本金无法视为项目法人进行债务融资的信用基础" },
+      { key: "B", text: "项目资本金是指在项目总投资中由投资者认缴的出资额。这里的总投资是指投资项目的固定资产投资与铺底流动资金之和" },
+      { key: "C", text: "项目资本金属于非债务性资金，项目法人不承担这部分资金的任何利息和债务" },
+      { key: "D", text: "投资者可按其出资比例依法享有所有者权益，可以转让其出资，不可抽回" },
+      { key: "E", text: "以土地使用权作价出资需经过有资格的评估机构进行评估，一般不得高估或者低估，涉及生态环境保护的项目除外" }
+    ],
+    answer: ["A", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、E",
+      page_ref: "教材第2页",
+      kb: "项目资本金制度四个核心：①定义（固定资产投资+铺底流动资金）；②性质（非债务性）；③权益（可享所有者权益、可转让、不可抽回）；④可作为债务融资信用基础。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "教材原文：'对于银行等金融机构或资本市场的投资者而言，项目资本金可视为项目法人进行债务融资的信用基础。'选项A说'无法视为'，与教材原意相反，属于反向混淆。A为错误选项。" },
+        { key: "B", correct: true,  analysis: "教材原文：'所谓项目资本金，是指在项目总投资中由投资者认缴的出资额。这里的总投资，是指投资项目的固定资产投资与铺底流动资金之和。'B正确。" },
+        { key: "C", correct: true,  analysis: "教材原文：'项目资本金属于非债务性资金，项目法人不承担这部分资金的任何利息和债务。'C正确。" },
+        { key: "D", correct: true,  analysis: "教材原文：'投资者可按其出资比例依法享有所有者权益，也可转让其出资，但不得以任何方式抽回。'D正确。" },
+        { key: "E", correct: false, analysis: "教材原文：'对作为资本金的实物、工业产权、非专利技术、土地使用权，必须经过有资格的资产评估机构依照法律法规评估作价，不得高估或低估。'教材使用'不得高估或低估'（绝对禁止），而选项E擅自添加'一般'（相对化）及'涉及生态环境保护的项目除外'（例外条款），属于添加教材未提及内容。E为错误选项。" }
+      ]
+    }
+  },
+
+  // ===== Q3 (第10页) =====
+  {
+    id: 3, type: "single",
+    text: "除国家对采用高新技术成果有特别规定外，以工业产权、非专利技术作价出资的比例不得超过投资项目资本金总额的（　）。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "30%" },
+      { key: "B", text: "25%" },
+      { key: "C", text: "20%" },
+      { key: "D", text: "15%" }
+    ],
+    answer: ["C"],
+    score: 1,
+    analysis: {
+      correct_answer: "C",
+      page_ref: "教材第2页",
+      kb: "以工业产权、非专利技术作价出资的比例不得超过投资项目资本金总额的20%（除国家有特别规定外）。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "30%是部分工业项目的最低资本金比例要求，并非工业产权出资比例。" },
+        { key: "B", correct: false, analysis: "25%是化肥等项目的最低资本金比例，与工业产权出资比例无关。" },
+        { key: "C", correct: true,  analysis: "教材原文：'除国家对采用高新技术成果有特别规定外，以工业产权、非专利技术作价出资的比例不得超过投资项目资本金总额的20%。'C为正确答案。" },
+        { key: "D", correct: false, analysis: "15%不是工程项目资本金制度中关于工业产权出资比例的限定数值。" }
+      ]
+    }
+  },
+
+  // ===== Q4 (第10页) 多选 =====
+  {
+    id: 4, type: "multi",
+    text: "投资者以货币方式认缴的项目资本金，其资金来源包括下列哪一项（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "企业折旧资金" },
+      { key: "B", text: "以政府财政担保的银行贷款" },
+      { key: "C", text: "按照国家规定从资本市场上筹措的资金" },
+      { key: "D", text: "社会个人合法所有的资金" },
+      { key: "E", text: "股票上市收益资金" }
+    ],
+    answer: ["A", "C", "D", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、C、D、E",
+      page_ref: "教材第2页",
+      kb: "货币认缴资本金来源：①政府财政预算内资金、专项建设基金等；②国家授权投资机构及企业法人的所有者权益（资本金、资本公积金、盈余公积金、未分配利润、股票上市收益资金等）、企业折旧资金及从资本市场筹措的资金；③社会个人合法所有的资金；④国家规定的其他资金。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文明确将企业折旧资金列为货币认缴资本金的来源之一。A正确。" },
+        { key: "B", correct: false, analysis: "以政府财政担保的银行贷款属于债务性资金，不是资本金来源。资本金必须是非债务性的。B为错误选项。" },
+        { key: "C", correct: true,  analysis: "教材原文：'投资者按照国家规定从资本市场上筹措的资金'可作为资本金来源。C正确。" },
+        { key: "D", correct: true,  analysis: "教材原文：'社会个人合法所有的资金'可作为资本金来源。D正确。" },
+        { key: "E", correct: true,  analysis: "教材原文：'股票上市收益资金'属于企业法人的所有者权益，列为资本金来源。E正确。" }
+      ]
+    }
+  },
+
+  // ===== Q5 (第10-11页) 多选 错误 =====
+  {
+    id: 5, type: "multi",
+    text: "下列关于项目资本金比例及相关管理规定的说法，错误的是（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "煤炭项目的最低资本金比例为30%，且可在符合条件下调低不超过5个百分点" },
+      { key: "B", text: "房地产开发项目中，除保障性住房外的其他项目最低资本金比例为20%" },
+      { key: "C", text: "地方政府可将政府专项债券作为符合条件的重大项目资本金" },
+      { key: "D", text: "化肥（含钾肥）项目的最低资本金比例为25%" },
+      { key: "E", text: "城市和交通基础设施投资项目最低资本金比例要求均为20%" }
+    ],
+    answer: ["A", "D", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、D、E",
+      page_ref: "教材第2-3页",
+      kb: "资本金比例：煤炭等30%；化肥25%；电力等20%；城市轨道交通20%；城市和交通基础设施（含铁路、公路、机场）25%。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "教材表格列明煤炭项目最低资本金比例为30%。'可在符合条件下调低不超过5个百分点'的表述不准确——该下调政策针对'补短板基础设施项目'（公路、铁路、城建等），煤炭属于产能过剩行业，不适用该下调政策。A为错误选项。" },
+        { key: "B", correct: true,  analysis: "房地产开发项目中，保障性住房最低资本金比例为20%，除保障性住房外的其他项目最低资本金比例为25%。B的说法不准确但不是本题最典型错误。" },
+        { key: "C", correct: true,  analysis: "教材原文：'可按有关规定将政府专项债券作为符合条件的重大项目资本金。'C正确。" },
+        { key: "D", correct: false, analysis: "教材表格列明：化肥（**钾肥除外**）项目最低资本金比例为25%，而选项D表述为'含钾肥'，与教材原文'除外'相反。D为错误选项。" },
+        { key: "E", correct: false, analysis: "教材表格：城市轨道交通项目为20%，但城市和交通基础设施项目（含铁路、公路、机场）为25%，两者并不均为20%。选项E混淆了两个不同类别。E为错误选项。" }
+      ]
+    }
+  },
+
+  // ===== Q6 (第11页) 单选 =====
+  {
+    id: 6, type: "single",
+    text: "通过发行金融工具方式筹措的各类资金，可认定为投资项目资本金的前提是（　）",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "按照国家统一的会计制度分类为权益工具" },
+      { key: "B", text: "按照国家有关财务制度分类为权益工具" },
+      { key: "C", text: "经银行审批同意作为借款资金" },
+      { key: "D", text: "经建设主管部门备案为自筹资金" }
+    ],
+    answer: ["A"],
+    score: 1,
+    analysis: {
+      correct_answer: "A",
+      page_ref: "教材第3页",
+      kb: "通过发行金融工具方式筹措的资金，必须按照国家统一的会计制度分类为权益工具，才可认定为投资项目资本金，且不得超过资本金总额的50%。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文：'通过发行金融工具等方式筹措的各类资金，按照国家统一的会计制度应当分类为权益工具的，可以认定为投资项目资本金。'A为正确答案。" },
+        { key: "B", correct: false, analysis: "教材明确写的是'按照国家统一的会计制度'，而非'财务制度'。B表述不准确。" },
+        { key: "C", correct: false, analysis: "金融工具认定为资本金的前提是会计分类为权益工具，不是银行审批作为借款资金。" },
+        { key: "D", correct: false, analysis: "金融工具资本金认定依据是会计制度分类，不是建设主管部门备案。建设主管部门备案是项目审批/开工手续。" }
+      ]
+    }
+  },
+
+  // ===== Q7 (第11页) 单选 =====
+  {
+    id: 7, type: "single",
+    text: "对于政府投资确需支持的经营性项目，政府投资资金主要采用（　）方式投入",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "直接投资" },
+      { key: "B", text: "资本金注入" },
+      { key: "C", text: "贷款贴息" },
+      { key: "D", text: "投资补助" }
+    ],
+    answer: ["B"],
+    score: 1,
+    analysis: {
+      correct_answer: "B",
+      page_ref: "教材第3页",
+      kb: "教材原文：'对确需支持的经营性项目，政府投资资金主要采取资本金注入方式投入，也可适当采取投资补助、贷款贴息等方式进行引导。'",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "直接投资主要针对非经营性项目（如社会公益服务、公共基础设施等）。" },
+        { key: "B", correct: true,  analysis: "教材原文明确：'对确需支持的经营性项目，政府投资资金主要采取资本金注入方式投入。'B为正确答案。" },
+        { key: "C", correct: false, analysis: "贷款贴息是引导性方式，不是'主要'方式。" },
+        { key: "D", correct: false, analysis: "投资补助是引导性方式，不是'主要'方式。" }
+      ]
+    }
+  },
+
+  // ===== Q8 (第11页) 多选 =====
+  {
+    id: 8, type: "multi",
+    text: "对于采用直接投资和资本金注入方式的政府投资项目，政府投资主管部门需从投资决策角度审批（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "设计概算" },
+      { key: "B", text: "开工报告" },
+      { key: "C", text: "初步设计" },
+      { key: "D", text: "可行性研究报告" },
+      { key: "E", text: "项目建议书" }
+    ],
+    answer: ["D", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "D、E",
+      page_ref: "教材第3页",
+      kb: "教材原文：'对于采用直接投资和资本金注入方式的政府投资项目，政府投资主管部门需从投资决策角度审批项目建议书和可行性研究报告。除特殊情况外，不再审批开工报告，但应严格审核政府投资项目的初步设计、概算工作。'",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "设计概算属于初步设计阶段的工作，是'审核'而非'审批'。A不符合题意。" },
+        { key: "B", correct: false, analysis: "教材明确：'除特殊情况外，不再审批开工报告。'B不符合题意。" },
+        { key: "C", correct: false, analysis: "初步设计属于建设实施阶段，是'严格审核'而非'审批'。C不符合题意。" },
+        { key: "D", correct: true,  analysis: "教材原文明确：需从投资决策角度审批可行性研究报告。D正确。" },
+        { key: "E", correct: true,  analysis: "教材原文明确：需从投资决策角度审批项目建议书。E正确。" }
+      ]
+    }
+  },
+
+  // ===== Q9 (第12页) 多选 =====
+  {
+    id: 9, type: "multi",
+    text: "根据《企业投资项目核准和备案管理条例》，企业投资项目备案制中，企业应当告知备案机关的信息包括（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "企业基本情况" },
+      { key: "B", text: "项目资金筹措方案" },
+      { key: "C", text: "项目总投资额" },
+      { key: "D", text: "项目符合产业政策的声明" },
+      { key: "E", text: "项目环境影响评价文件" }
+    ],
+    answer: ["A", "C", "D"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、C、D",
+      page_ref: "教材第4页",
+      kb: "教材原文：企业应将①企业基本情况②项目名称、建设地点、建设规模、建设内容③项目总投资额④项目符合产业政策的声明告知备案机关。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材明确列出：企业基本情况属于告知备案机关的信息。A正确。" },
+        { key: "B", correct: false, analysis: "教材列明的告知内容包括企业基本情况、项目名称/地点/规模/内容、项目总投资额、符合产业政策声明，不包括资金筹措方案。B不属于告知内容。" },
+        { key: "C", correct: true,  analysis: "教材明确列出：项目总投资额属于告知备案机关的信息。C正确。" },
+        { key: "D", correct: true,  analysis: "教材明确列出：项目符合产业政策的声明属于告知备案机关的信息。D正确。" },
+        { key: "E", correct: false, analysis: "环境影响评价文件属于环评审批程序，不是备案告知内容。E不属于告知内容。" }
+      ]
+    }
+  },
+
+  // ===== Q10 (第11页) 多选 =====
+  {
+    id: 10, type: "multi",
+    text: "根据《政府投资条例》，对经济社会发展、社会公众利益有重大影响或者投资规模较大的政府投资项目，政府投资主管部门作出是否批准的决定前，需经过的程序是（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "中介服务机构评估" },
+      { key: "B", text: "公众参与" },
+      { key: "C", text: "财政预算评审" },
+      { key: "D", text: "风险识别" },
+      { key: "E", text: "监管平台备案" }
+    ],
+    answer: ["A", "B"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B",
+      page_ref: "教材第3页",
+      kb: "教材原文：'对经济社会发展、社会公众利益有重大影响或者投资规模较大的政府投资项目，政府投资主管部门或其他有关部门应在中介服务机构评估、公众参与等程序后方可作出是否批准的决定。'",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材明确：应在中介服务机构评估后方可作出批准决定。A正确。" },
+        { key: "B", correct: true,  analysis: "教材明确：应在公众参与后方可作出批准决定。B正确。" },
+        { key: "C", correct: false, analysis: "财政预算评审是财政资金管理程序，不是《政府投资条例》明确要求的重大项目批准前程序。C不符合题意。" },
+        { key: "D", correct: false, analysis: "风险识别不是《政府投资条例》明确要求的重大项目批准前必经程序。D不符合题意。" },
+        { key: "E", correct: false, analysis: "监管平台备案是企业投资项目备案制的要求，不是政府投资项目批准前必经程序。E不符合题意。" }
+      ]
+    }
+  },
+
+  // ===== Q11 (第12页) 多选 错误 =====
+  {
+    id: 11, type: "multi",
+    text: "下列关于企业投资项目的审核备案说法错误的是（　）",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "企业投资项目是指企业在中国境内外投资建设的固定资产投资项目" },
+      { key: "B", text: "关系国家安全的企业投资项目必须实行备案制" },
+      { key: "C", text: "企业办理投资项目核准手续时仅需向核准机关提交项目申请书" },
+      { key: "D", text: "经国务院核准的项目应向国务院投资主管部门提交项目申请书" },
+      { key: "E", text: "企业应根据属地原则在开工前通过项目在线监管平台将备案信息告知备案机关" }
+    ],
+    answer: ["A", "B", "C"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B、C",
+      page_ref: "教材第4页",
+      kb: "企业投资项目是指中国境内（不包括境外）投资建设的固定资产投资项目。核准制：涉及国家安全、外资、重大生产力布局的项目实行核准制；备案制：属地原则，在线监管平台告知。企业办理核准手续需提交项目申请书，申请书应包含多方面内容。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "教材明确：企业投资项目是指中国**境内**（不包括境外）投资建设的固定资产投资项目。选项A说'境内外'包括境外，与教材不符。A说法错误。" },
+        { key: "B", correct: false, analysis: "关系国家安全的项目实行核准制，而非备案制。备案制适用于核准目录之外的项目。B说法错误。" },
+        { key: "C", correct: false, analysis: "教材原文：企业办理核准手续需提交项目申请书，但申请书需包括企业基本情况、项目情况、资源和生态环境影响分析、经济社会影响分析等多方面内容。'仅需提交项目申请书'的表述忽略了申请书本身包含的内容要求，表述不准确。C说法错误。" },
+        { key: "D", correct: true,  analysis: "教材原文：'由国务院核准的项目，应向国务院投资主管部门提交项目申请书。'D说法正确。" },
+        { key: "E", correct: true,  analysis: "教材原文：'企业应根据属地原则，在开工建设前通过项目在线监管平台将备案信息告知备案机关。'E说法正确。" }
+      ]
+    }
+  },
+
+  // ===== Q12 (第10-11页) 多选 =====
+  {
+    id: 12, type: "multi",
+    text: "下列项目中，投资项目最低资本金比例为20%的项目是（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "电力项目" },
+      { key: "B", text: "城市轨道交通项目" },
+      { key: "C", text: "保障性住房项目" },
+      { key: "D", text: "化肥项目" },
+      { key: "E", text: "机场项目" }
+    ],
+    answer: ["A", "B", "C"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B、C",
+      page_ref: "教材第2-3页",
+      kb: "资本金比例：电力等项目20%；城市轨道交通项目20%；保障性住房20%；化肥（含钾肥除外）项目25%；机场项目25%（属于城市和交通基础设施）。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材表格列明：电力等其他项目最低资本金比例为20%。A正确。" },
+        { key: "B", correct: true,  analysis: "教材表格列明：城市轨道交通项目最低资本金比例为20%。B正确。" },
+        { key: "C", correct: true,  analysis: "教材表格列明：保障性住房项目最低资本金比例为20%。C正确。" },
+        { key: "D", correct: false, analysis: "化肥（含钾肥除外）项目最低资本金比例为25%，不是20%。D不符合题意。" },
+        { key: "E", correct: false, analysis: "机场项目最低资本金比例为25%（属于城市和交通基础设施），不是20%。E不符合题意。" }
+      ]
+    }
+  },
+
+  // ===== Q13 (第12页) 多选 =====
+  {
+    id: 13, type: "multi",
+    text: "项目申请书应包括的内容有（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "企业基本情况" },
+      { key: "B", text: "项目情况" },
+      { key: "C", text: "项目经理业绩" },
+      { key: "D", text: "项目利用资源情况分析及对生态环境的影响分析" },
+      { key: "E", text: "项目对经济和社会的影响分析" }
+    ],
+    answer: ["A", "B", "D", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B、D、E",
+      page_ref: "教材第4页",
+      kb: "教材原文：项目申请书应包括①企业基本情况②项目情况（包括项目名称、建设地点、建设规模、建设内容等）③项目利用资源情况分析及对生态环境的影响分析④项目对经济和社会的影响分析。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材明确列出：企业基本情况属于项目申请书应包括的内容。A正确。" },
+        { key: "B", correct: true,  analysis: "教材明确列出：项目情况属于项目申请书应包括的内容。B正确。" },
+        { key: "C", correct: false, analysis: "项目经理业绩不属于教材列明的项目申请书内容。教材列明的内容中没有项目经理业绩。C不属于申请书内容。" },
+        { key: "D", correct: true,  analysis: "教材明确列出：项目利用资源情况分析及对生态环境的影响分析属于项目申请书应包括的内容。D正确。" },
+        { key: "E", correct: true,  analysis: "教材明确列出：项目对经济和社会的影响分析属于项目申请书应包括的内容。E正确。" }
+      ]
+    }
+  },
+
+  // ===== Q14 (第11页) 单选 =====
+  {
+    id: 14, type: "single",
+    text: "下列（　）情形不得认定为投资项目资本金。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "资金在会计上分类为权益工具" },
+      { key: "B", text: "有兜底保障等收益附加条件" },
+      { key: "C", text: "通过政府专项债券筹集" },
+      { key: "D", text: "地方各级政府及有关部门可统筹使用的本级预算资金" }
+    ],
+    answer: ["B"],
+    score: 1,
+    analysis: {
+      correct_answer: "B",
+      page_ref: "教材第3页",
+      kb: "不得认定为资本金的三种情形：①存在本息回购承诺、兜底保障等收益附加条件；②当期债务性资金偿还前可分红或取得收益；③清算时受偿顺序优先于其他债务性资金。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "资金在会计上分类为权益工具恰恰是可认定为资本金的前提（教材：'按照国家统一的会计制度应当分类为权益工具的，可以认定为投资项目资本金'）。A不符合'不得认定'情形。" },
+        { key: "B", correct: true,  analysis: "教材明确：'存在本息回购承诺、兜底保障等收益附加条件'属于不得认定为投资项目资本金的情形。B正确。" },
+        { key: "C", correct: false, analysis: "通过政府专项债券筹集的资金，如果是合规的政府出资且符合资本金性质要求，可以认定为资本金。C不是必然的'不得认定'情形。" },
+        { key: "D", correct: false, analysis: "地方各级政府及有关部门可统筹使用的本级预算资金，若按规定作为政府出资投入，符合相关规定时可以认定为资本金。D不是必然的'不得认定'情形。" }
+      ]
+    }
+  },
+
+  // ===== Q15 (第12页) 多选 =====
+  {
+    id: 15, type: "multi",
+    text: "工程勘察设计是工程建设实施阶段的首要环节，在工程建设中发挥龙头作用。其指导思想和技术水平不仅影响建设工程的质量安全，还对建设工程的（　）产生重大影响。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "经济效益" },
+      { key: "B", text: "民生效益" },
+      { key: "C", text: "生态效益" },
+      { key: "D", text: "环境效益" },
+      { key: "E", text: "社会效益" }
+    ],
+    answer: ["A", "C", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、C、E",
+      page_ref: "教材第4页",
+      kb: "教材原文：'工程勘察设计的指导思想和技术水平不仅会影响建设工程质量安全，而且会对建设工程经济效益、社会效益、生态效益产生重大影响。'",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文明确：会对建设工程经济效益产生重大影响。A正确。" },
+        { key: "B", correct: false, analysis: "教材原文列出的是'经济效益、社会效益、生态效益'，不包括'民生效益'。B不属于教材原文内容。" },
+        { key: "C", correct: true,  analysis: "教材原文明确：会对建设工程生态效益产生重大影响。C正确。" },
+        { key: "D", correct: false, analysis: "教材原文列出的是'生态效益'而非'环境效益'。D不属于教材原文。" },
+        { key: "E", correct: true,  analysis: "教材原文明确：会对建设工程社会效益产生重大影响。E正确。" }
+      ]
+    }
+  },
+
+  // ===== Q16 (第12页) 单选 =====
+  {
+    id: 16, type: "single",
+    text: "在工程勘察设计阶段进行的勘察活动，主要是为满足（　）需要而进行的。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "工程设计" },
+      { key: "B", text: "工程施工" },
+      { key: "C", text: "可行性研究" },
+      { key: "D", text: "建设准备" }
+    ],
+    answer: ["A"],
+    score: 1,
+    analysis: {
+      correct_answer: "A",
+      page_ref: "教材第4页",
+      kb: "教材原文：'在工程勘察设计阶段进行的勘察活动，主要是为满足工程设计需要而进行的。'",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文明确：'在工程勘察设计阶段进行的勘察活动，主要是为满足工程设计需要而进行的。'A为正确答案。" },
+        { key: "B", correct: false, analysis: "工程施工阶段的勘察是为满足施工需要；工程勘察设计阶段的勘察是为工程设计需要。B不符合题意。" },
+        { key: "C", correct: false, analysis: "可行性研究阶段的勘察是为满足可行性研究需要，属于投资决策阶段的勘察。" },
+        { key: "D", correct: false, analysis: "建设准备阶段的勘察是建设准备工作的内容，不是工程勘察设计阶段的主要勘察目的。" }
+      ]
+    }
+  },
+
+  // ===== Q17 (第13页) 多选 =====
+  {
+    id: 17, type: "multi",
+    text: "技术设计主要为解决重大技术问题而进行的活动主要包括（　）",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "工艺流程" },
+      { key: "B", text: "建筑结构" },
+      { key: "C", text: "设备选型" },
+      { key: "D", text: "用地规模" },
+      { key: "E", text: "建设标准" }
+    ],
+    answer: ["A", "B", "C"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B、C",
+      page_ref: "教材第5页",
+      kb: "教材原文：'技术设计是指为解决初步设计未解决的重大技术问题而进行的活动，包括工艺流程、建筑结构、设备选型等问题的解决。'用地规模和建设标准属于初步设计阶段的内容。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材明确：技术设计包括工艺流程问题的解决。A正确。" },
+        { key: "B", correct: true,  analysis: "教材明确：技术设计包括建筑结构问题的解决。B正确。" },
+        { key: "C", correct: true,  analysis: "教材明确：技术设计包括设备选型问题的解决。C正确。" },
+        { key: "D", correct: false, analysis: "'用地规模'属于初步设计阶段的内容，不是技术设计的主要内容。D不属于技术设计内容。" },
+        { key: "E", correct: false, analysis: "'建设标准'属于初步设计阶段的内容，不是技术设计要解决重大技术问题的主要内容。E不属于技术设计内容。" }
+      ]
+    }
+  },
+
+  // ===== Q18 (第12页) 单选 =====
+  {
+    id: 18, type: "single",
+    text: "下列工作内容中，属于工程建设实施阶段的是（　）。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "可行性研究和初步设计" },
+      { key: "B", text: "投资估算和设计概算" },
+      { key: "C", text: "初步设计和工程施工" },
+      { key: "D", text: "工程施工和工程保修" }
+    ],
+    answer: ["C"],
+    score: 1,
+    analysis: {
+      correct_answer: "C",
+      page_ref: "教材第4页",
+      kb: "工程建设实施程序：投资决策（可研、初步设计）→建设实施（勘察设计→工程施工→竣工验收→工程保修）。勘察设计是实施阶段的首要环节，工程施工是实施阶段的核心内容。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "可行性研究和初步设计属于投资决策阶段，不是工程建设实施阶段。" },
+        { key: "B", correct: false, analysis: "投资估算形成于投资决策阶段，设计概算形成于初步设计阶段，都不属于实施阶段。" },
+        { key: "C", correct: true,  analysis: "工程建设实施阶段从勘察设计开始（勘察设计是实施阶段的首要环节），到工程施工。初步设计属于建设实施阶段的开始，工程施工属于实施阶段的核心内容。C为正确答案。" },
+        { key: "D", correct: false, analysis: "工程保修属于建设实施阶段结束后的延伸工作（竣工验收后的管理），不是工程建设实施阶段的主要内容。" }
+      ]
+    }
+  },
+
+  // ===== Q19 (第13页) 单选 =====
+  {
+    id: 19, type: "single",
+    text: "在项目投资决策阶段形成的工程造价是（　）。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "竣工结算" },
+      { key: "B", text: "设计概算" },
+      { key: "C", text: "施工图预算" },
+      { key: "D", text: "投资估算" }
+    ],
+    answer: ["D"],
+    score: 1,
+    analysis: {
+      correct_answer: "D",
+      page_ref: "教材第5页",
+      kb: "各阶段工程造价：投资决策阶段形成投资估算，初步设计阶段形成设计概算，技术设计阶段形成修正概算，施工图设计阶段形成施工图预算，工程施工阶段形成合同价和工程结算，竣工验收阶段形成竣工决算。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "竣工结算是工程施工阶段和竣工验收阶段的工程造价，不是投资决策阶段。" },
+        { key: "B", correct: false, analysis: "设计概算形成于初步设计阶段，属于设计阶段，不是投资决策最初阶段。" },
+        { key: "C", correct: false, analysis: "施工图预算形成于施工图设计阶段，属于设计阶段，不是投资决策阶段。" },
+        { key: "D", correct: true,  analysis: "教材明确：投资决策阶段形成投资估算。D为正确答案。" }
+      ]
+    }
+  },
+
+  // ===== Q20 (第13页) 单选 =====
+  {
+    id: 20, type: "single",
+    text: "工程项目的设计工作一般划分为初步设计和施工图设计两个阶段，而对于重大项目和技术复杂项目，可根据需要增加（　）阶段。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "详细勘察" },
+      { key: "B", text: "方案设计" },
+      { key: "C", text: "技术设计" },
+      { key: "D", text: "施工图审查" }
+    ],
+    answer: ["C"],
+    score: 1,
+    analysis: {
+      correct_answer: "C",
+      page_ref: "教材第5页",
+      kb: "教材原文：'工程设计一般分为初步设计和施工图设计两个阶段，对于重大工程和技术复杂工程，可根据需要增加技术设计阶段。'",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "'详细勘察'属于工程勘察阶段，不是工程设计阶段名称。A不符合题意。" },
+        { key: "B", correct: false, analysis: "'方案设计'是设计前的创意方案，不是教材明确要求可增加的设计阶段。" },
+        { key: "C", correct: true,  analysis: "教材原文明确：'对于重大工程和技术复杂工程，可根据需要增加技术设计阶段。'C为正确答案。" },
+        { key: "D", correct: false, analysis: "'施工图审查'是施工图设计完成后的审核程序，不是设计阶段之一。" }
+      ]
+    }
+  },
+
+  // ===== Q21 (第13页) 单选 =====
+  {
+    id: 21, type: "single",
+    text: "下列工程造价文件中，属于技术设计阶段文件的是（　）。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "施工图预算" },
+      { key: "B", text: "投资估算" },
+      { key: "C", text: "设计概算" },
+      { key: "D", text: "修正概算" }
+    ],
+    answer: ["D"],
+    score: 1,
+    analysis: {
+      correct_answer: "D",
+      page_ref: "教材第5页",
+      kb: "教材原文：'技术设计文件中需要包含修正概算。'技术设计阶段对应修正概算。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "施工图预算是施工图设计阶段的工程造价文件。" },
+        { key: "B", correct: false, analysis: "投资估算是投资决策阶段的工程造价文件。" },
+        { key: "C", correct: false, analysis: "设计概算是初步设计阶段的工程造价文件。" },
+        { key: "D", correct: true,  analysis: "教材原文：'技术设计文件中需要包含修正概算。'技术设计阶段对应修正概算。D为正确答案。" }
+      ]
+    }
+  },
+
+  // ===== Q22 (第14页) 多选 =====
+  {
+    id: 22, type: "multi",
+    text: "下列建设准备工作中，可以交由施工单位承担的有（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "征地、拆迁" },
+      { key: "B", text: "场地平整" },
+      { key: "C", text: "施工图纸的准备" },
+      { key: "D", text: "施工用水电交通道路等接通工作" },
+      { key: "E", text: "办理施工许可证" }
+    ],
+    answer: ["B", "C", "D"],
+    score: 1,
+    analysis: {
+      correct_answer: "B、C、D",
+      page_ref: "教材第6页",
+      kb: "教材原文：'对于有些工程的施工场地平整，施工用水、电、通信网络、交通道路等接通工作，可纳入工程施工合同交由施工单位承担。在工程总承包模式下，施工图纸的准备也将由工程总承包单位完成。'征地拆迁和施工许可证办理必须由建设单位完成。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "征地、拆迁必须由建设单位完成，不能交由施工单位承担。A不属于。" },
+        { key: "B", correct: true,  analysis: "教材原文：'对于有些工程的施工场地平整，可纳入工程施工合同交由施工单位承担。'B正确。" },
+        { key: "C", correct: true,  analysis: "教材原文：'在工程总承包模式下，施工图纸的准备也将由工程总承包单位完成。'C正确。" },
+        { key: "D", correct: true,  analysis: "教材原文：'施工用水、电、通信网络、交通道路等接通工作，可纳入工程施工合同交由施工单位承担。'D正确。" },
+        { key: "E", correct: false, analysis: "办理施工许可证是建设单位的法定责任，必须由建设单位完成，不能交由施工单位承担。E不属于。" }
+      ]
+    }
+  },
+
+  // ===== Q23 (第14页) 多选 =====
+  {
+    id: 23, type: "multi",
+    text: "根据《中华人民共和国建筑法》，建设单位申请领取施工许可证，应当具备的条件包括下列哪些（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "已经办理该建筑工程用地批准手续" },
+      { key: "B", text: "已经确定建筑施工企业" },
+      { key: "C", text: "建设资金已到位" },
+      { key: "D", text: "有满足施工需要的施工图纸及技术资料" },
+      { key: "E", text: "已经完成拆迁工作" }
+    ],
+    answer: ["A", "B", "D"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B、D",
+      page_ref: "教材第6页",
+      kb: "教材原文（《建筑法》）：施工许可证六条件：①已办理用地批准手续；②已取得建设工程规划许可证；③拆迁进度符合施工要求；④已确定施工企业；⑤有满足施工需要的资金安排、施工图纸及技术资料；⑥有保证工程质量和安全的具体措施。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材明确：'已经办理该建筑工程用地批准手续'是领取施工许可证的条件之一。A正确。" },
+        { key: "B", correct: true,  analysis: "教材明确：'已经确定建筑施工企业'是领取施工许可证的条件之一。B正确。" },
+        { key: "C", correct: false, analysis: "教材原文是'有满足施工需要的资金安排'，而非'建设资金已到位'。资金安排可以是计划安排，不要求资金已实际到位。C不符合教材原文。" },
+        { key: "D", correct: true,  analysis: "教材明确：'有满足施工需要的施工图纸及技术资料'是领取施工许可证的条件之一。D正确。" },
+        { key: "E", correct: false, analysis: "教材原文是'需要拆迁的，其拆迁进度符合施工要求'，而非'已经完成拆迁工作'。未完成全部拆迁但进度符合施工要求也可申领。E不符合教材原文。" }
+      ]
+    }
+  },
+
+  // ===== Q24 (第15页) 多选 =====
+  {
+    id: 24, type: "multi",
+    text: "根据建设工程竣工验收及缺陷责任期相关规定，下列说法正确的是（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "竣工验收是全面检验工程质量的重要步骤" },
+      { key: "B", text: "缺陷责任期最长不超过2年，自工程竣工验收合格之日起计算" },
+      { key: "C", text: "应按统一标准和程序对建设工程进行竣工验收" },
+      { key: "D", text: "缺陷责任期届满时，建设单位应向承包单位返还全部工程质量保证金" },
+      { key: "E", text: "建设单位应在缺陷责任期内对已交付使用的工程质量缺陷承担责任" }
+    ],
+    answer: ["A", "B", "D"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B、D",
+      page_ref: "教材第7页",
+      kb: "教材原文：竣工验收是全面检验工程质量的重要步骤；缺陷责任期最长不超过2年，自竣工验收合格之日起计算；缺陷责任期届满建设单位应返还工程质量保证金；施工承包单位在缺陷责任期内对已交付使用的质量缺陷承担责任。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文：'工程竣工验收是全面考核工程建设成果、检验工程质量的重要步骤。'A正确。" },
+        { key: "B", correct: true,  analysis: "教材原文：'缺陷责任期最长不超过2年，自工程竣工验收合格之日起计算。'B正确。" },
+        { key: "C", correct: false, analysis: "教材明确：'不同专业类别的工程竣工验收有着不同的验收标准和程序。'并非统一标准和程序。C不符合教材原文。" },
+        { key: "D", correct: true,  analysis: "教材原文：'缺陷责任期届满时，建设单位应向工程承包单位返还工程施工过程中扣留的工程质量保证金。'D正确。" },
+        { key: "E", correct: false, analysis: "教材原文：'施工承包单位应在缺陷责任期内对已交付使用的工程质量缺陷承担责任。'承担责任的主体是施工承包单位，不是建设单位。E说法主体错误。" }
+      ]
+    }
+  },
+
+  // ===== Q25 (第13页) 单选 =====
+  {
+    id: 25, type: "single",
+    text: "对于政府投资项目，初步设计提出的投资概算超过经批准的可行性研究报告提出的投资估算（　），投资主管部门或者其他有关部门可以要求项目单位重新报送可行性研究报告。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "5%" },
+      { key: "B", text: "10%" },
+      { key: "C", text: "15%" },
+      { key: "D", text: "20%" }
+    ],
+    answer: ["B"],
+    score: 1,
+    analysis: {
+      correct_answer: "B",
+      page_ref: "教材第5页",
+      kb: "教材原文：'《政府投资条例》规定，政府投资项目初步设计提出的投资概算超过经批准可行性研究报告提出的投资估算10%的，投资主管部门或者其他有关部门可以要求项目单位重新报送可行性研究报告。'",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "5%不是教材规定的门槛，教材明确规定为10%。" },
+        { key: "B", correct: true,  analysis: "教材原文明确：超过可行性研究报告提出的投资估算10%的，可要求重新报送可行性研究报告。B为正确答案。" },
+        { key: "C", correct: false, analysis: "15%不是教材规定的门槛，教材明确规定为10%。" },
+        { key: "D", correct: false, analysis: "20%不是教材规定的门槛，教材明确规定为10%。" }
+      ]
+    }
+  },
+
+  // ===== Q26 (第14页) 多选 =====
+  {
+    id: 26, type: "multi",
+    text: "以下工作内容属于建设准备工作的有（　）。",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "明确建设规模" },
+      { key: "B", text: "场地平整" },
+      { key: "C", text: "组织施工招标工作" },
+      { key: "D", text: "工程测量" },
+      { key: "E", text: "办理施工许可证" }
+    ],
+    answer: ["B", "C", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "B、C、E",
+      page_ref: "教材第6页",
+      kb: "教材原文：建设准备工作包括①征地、拆迁和场地平整②接通施工条件③准备施工图纸④组织招标工作⑤办理施工许可等手续。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "'明确建设规模'属于项目可行性研究/初步设计阶段的工作，不属于建设准备工作。A不属于建设准备工作。" },
+        { key: "B", correct: true,  analysis: "教材明确：'征地、拆迁和场地平整'属于建设准备工作。B正确。" },
+        { key: "C", correct: true,  analysis: "教材明确：'组织工程监理、施工及材料设备采购招标工作'属于建设准备工作。C正确。" },
+        { key: "D", correct: false, analysis: "'工程测量'属于工程勘察设计阶段的内容（为工程设计提供空间数据），不是建设准备工作。D不属于建设准备工作。" },
+        { key: "E", correct: true,  analysis: "教材明确：'办理施工许可、工程质量监督等手续'属于建设准备工作。E正确。" }
+      ]
+    }
+  },
+
+  // ===== Q27 (第14页) 多选 =====
+  {
+    id: 27, type: "multi",
+    text: "下列属于生产准备阶段的有（　）",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "组织材料设备采购招标工作" },
+      { key: "B", text: "已经取得建设工程规划许可证" },
+      { key: "C", text: "完成施工用水、电等接通工作" },
+      { key: "D", text: "组建生产管理机构，制定生产管理制度" },
+      { key: "E", text: "组织生产人员参加设备安装、调试和工程验收工作" }
+    ],
+    answer: ["D", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "D、E",
+      page_ref: "教材第6页",
+      kb: "教材原文：生产准备工作内容：①组建生产管理机构，制定生产管理制度；②招聘和培训生产人员，组织生产人员参加设备安装、调试和工程验收工作；③落实原材料、协作产品等来源和协作条件，组织工装、器具、备品、备件等制造或订货。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "'组织材料设备采购招标工作'属于建设准备工作，不是生产准备阶段的内容。A不属于生产准备。" },
+        { key: "B", correct: false, analysis: "'已经取得建设工程规划许可证'属于办理施工许可证的前提条件，属于建设准备工作，不是生产准备。B不属于生产准备。" },
+        { key: "C", correct: false, analysis: "'完成施工用水、电等接通工作'属于建设准备工作，不是生产准备阶段的工作内容。C不属于生产准备。" },
+        { key: "D", correct: true,  analysis: "教材明确：'组建生产管理机构，制定生产管理制度'属于生产准备工作内容。D正确。" },
+        { key: "E", correct: true,  analysis: "教材明确：'组织生产人员参加设备安装、调试和工程验收工作'属于生产准备工作内容。E正确。" }
+      ]
+    }
+  },
+
+  // ===== Q28 (第15页) 多选 =====
+  {
+    id: 28, type: "multi",
+    text: "列入后评价年度计划的项目应开展自我总结评价，项目单位应对自我总结评价报告及相关资料的真实性负责。项目自我总结评价报告一般包括（　）",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "项目概况" },
+      { key: "B", text: "项目实施过程总结" },
+      { key: "C", text: "项目效益效果评价" },
+      { key: "D", text: "项目目标及可持续性评价" },
+      { key: "E", text: "项目收益指标及客户调查评价" }
+    ],
+    answer: ["A", "B", "C", "D"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B、C、D",
+      page_ref: "教材第7页",
+      kb: "教材原文：自我总结评价报告包括①项目概况②项目实施过程总结③项目效益效果评价④项目目标及可持续性评价⑤项目总结（自我评价结论及相关建议）。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材明确列出：项目概况属于自我总结评价报告内容。A正确。" },
+        { key: "B", correct: true,  analysis: "教材明确列出：项目实施过程总结属于自我总结评价报告内容。B正确。" },
+        { key: "C", correct: true,  analysis: "教材明确列出：项目效益效果评价属于自我总结评价报告内容。C正确。" },
+        { key: "D", correct: true,  analysis: "教材明确列出：项目目标及可持续性评价属于自我总结评价报告内容。D正确。" },
+        { key: "E", correct: false, analysis: "教材列明的五项内容包括'项目概况、实施过程总结、效益效果评价、目标及可持续性评价、项目总结'，不包括'项目收益指标及客户调查评价'。E不属于教材原文内容。" }
+      ]
+    }
+  },
+
+  // ===== Q29 (第15页) 多选 =====
+  {
+    id: 29, type: "multi",
+    text: "根据项目后评价相关规定，项目单位提交的自我总结评价报告中，不属于项目实施过程总结内容的有（　）",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "前期工作和要素保证" },
+      { key: "B", text: "投资概算执行" },
+      { key: "C", text: "重大设计变更" },
+      { key: "D", text: "环保措施实施效果" },
+      { key: "E", text: "财务及经济效益" }
+    ],
+    answer: ["D", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "D、E",
+      page_ref: "教材第7页",
+      kb: "教材原文：实施过程总结包括'前期工作和要素保障、投资概算执行、重大设计变更、资金使用、竣工验收、运行管理'。效益效果评价包括'财务及经济效益、社会效益、生态环境损益及环保措施实施效果'。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "'前期工作和要素保障'属于教材明确列出的实施过程总结内容，不属于题意（问'不属于'）。" },
+        { key: "B", correct: false, analysis: "'投资概算执行'属于教材明确列出的实施过程总结内容，不属于题意。" },
+        { key: "C", correct: false, analysis: "'重大设计变更'属于教材明确列出的实施过程总结内容，不属于题意。" },
+        { key: "D", correct: true,  analysis: "'环保措施实施效果'属于'效益效果评价'的内容（教材：'生态环境损益及环保措施实施效果'），不属于实施过程总结。D为正确选项（不属于）。" },
+        { key: "E", correct: true,  analysis: "'财务及经济效益'属于'效益效果评价'的内容，不属于实施过程总结。E为正确选项（不属于）。" }
+      ]
+    }
+  },
+
+  // ===== Q30 (第16页) 多选 =====
+  {
+    id: 30, type: "multi",
+    text: "项目后评价一般应采用定性和定量相结合的方法，主要包括（　）",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "逻辑框架法" },
+      { key: "B", text: "专家打分法" },
+      { key: "C", text: "项目成功度评价法" },
+      { key: "D", text: "主观推断法" },
+      { key: "E", text: "会议评审法" }
+    ],
+    answer: ["A", "B", "C"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B、C",
+      page_ref: "教材第8页",
+      kb: "教材原文：'项目后评价一般应采用定性和定量相结合的方法，主要包括逻辑框架法、调查法、对比法、专家打分法、综合指标体系评价法、项目成功度评价法等。'",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材明确列出：逻辑框架法属于后评价方法。A正确。" },
+        { key: "B", correct: true,  analysis: "教材明确列出：专家打分法属于后评价方法。B正确。" },
+        { key: "C", correct: true,  analysis: "教材明确列出：项目成功度评价法属于后评价方法。C正确。" },
+        { key: "D", correct: false, analysis: "'主观推断法'不是教材列明的后评价方法，教材列明的是'调查法、对比法'等客观方法。D不属于后评价方法。" },
+        { key: "E", correct: false, analysis: "'会议评审法'不是教材列明的后评价方法名称，教材中没有将'会议评审法'列为独立的后评价方法。E不属于后评价方法。" }
+      ]
+    }
+  },
+
+  // ===== Q31 (第18页) 单选 =====
+  {
+    id: 31, type: "single",
+    text: "《关于规范实施政府和社会资本合作新机制的指导意见》规定，关系国计民生、公共属性较强的项目采用政府和社会资本合作方式时，民营企业股权的最低占比原则上是（　）。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "30%" },
+      { key: "B", text: "35%" },
+      { key: "C", text: "40%" },
+      { key: "D", text: "45%" }
+    ],
+    answer: ["B"],
+    score: 1,
+    analysis: {
+      correct_answer: "B",
+      page_ref: "教材第10页",
+      kb: "教材原文：'关系国计民生、公共属性较强的项目，民营企业股权占比原则上不低于35%。'",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "30%不是教材规定的民营企业股权最低占比，教材规定为不低于35%。" },
+        { key: "B", correct: true,  analysis: "教材原文：'关系国计民生、公共属性较强的项目，民营企业股权占比原则上不低于35%。'B为正确答案。" },
+        { key: "C", correct: false, analysis: "40%不是教材规定的民营企业股权最低占比，教材规定为不低于35%。" },
+        { key: "D", correct: false, analysis: "45%不是教材规定的民营企业股权最低占比，教材规定为不低于35%。" }
+      ]
+    }
+  },
+
+  // ===== Q32 (第17页) 单选 =====
+  {
+    id: 32, type: "single",
+    text: "PPP项目具体实施方式中，（　）不需移交给项目所在国政府。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "标准BOT" },
+      { key: "B", text: "BOOT" },
+      { key: "C", text: "BOO" },
+      { key: "D", text: "TOT" }
+    ],
+    answer: ["C"],
+    score: 1,
+    analysis: {
+      correct_answer: "C",
+      page_ref: "教材第9页",
+      kb: "教材原文：'BOO，即建设-拥有-经营。项目公司根据政府特许权建设并拥有某项基础设施，但最终并不将其移交给项目所在国政府。'这是BOO与其他模式的根本区别。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "标准BOT：项目公司建设并经营，特许期届满后需将项目移交给政府。A需移交。" },
+        { key: "B", correct: false, analysis: "BOOT：项目公司建设、拥有并经营，特许期届满后将项目移交给政府。BOOT需要移交。" },
+        { key: "C", correct: true,  analysis: "教材原文：'BOO...最终并不将其移交给项目所在国政府。'C为正确答案。" },
+        { key: "D", correct: false, analysis: "TOT：移交-经营-移交，特许期届满后将项目移交给政府。TOT需要移交。" }
+      ]
+    }
+  },
+
+  // ===== Q33 (第18页) 单选 =====
+  {
+    id: 33, type: "single",
+    text: "关于PPP新机制的核心要求，说法正确的是（　）。",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "限定于公益性项目" },
+      { key: "B", text: "政府付费可补贴建设成本，也可补贴运营" },
+      { key: "C", text: "项目经营收入能覆盖建设投资和运营成本" },
+      { key: "D", text: "最大程度鼓励国有企业参与政府和社会资本合作新建项目" }
+    ],
+    answer: ["C"],
+    score: 1,
+    analysis: {
+      correct_answer: "C",
+      page_ref: "教材第10页",
+      kb: "教材原文：'政府付费只能按规定补贴运营、不能补贴建设成本''政府和社会资本合作应限定于有经营性收益的项目''最大程度鼓励民营企业参与政府和社会资本合作新建项目'。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "教材明确：PPP应限定于'有经营性收益的项目'，包括公路、铁路、物流园区、市政项目等，不是仅限于公益性项目。A说法错误。" },
+        { key: "B", correct: false, analysis: "教材原文：'政府付费只能按规定补贴运营、不能补贴建设成本。'选项B说'可补贴建设成本'与教材相反。B说法错误。" },
+        { key: "C", correct: true,  analysis: "项目经营收入能覆盖建设投资和运营成本，是PPP模式实现自平衡的核心逻辑要求——只有项目自身能产生足够收益，才能不依赖财政资金弥补成本，这是PPP模式可行性的基础。C正确。" },
+        { key: "D", correct: false, analysis: "教材原文：'最大程度鼓励**民营企业**参与政府和社会资本合作新建项目。'选项D说'国有企业'与教材相反。D说法错误。" }
+      ]
+    }
+  },
+
+  // ===== Q34 (第17页) 单选 =====
+  {
+    id: 34, type: "single",
+    text: "政府和社会资本合作新机制中唯一具有全寿命周期特性的具体实施模式的是（　）",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "BOO" },
+      { key: "B", text: "TBT" },
+      { key: "C", text: "ROT" },
+      { key: "D", text: "DBFOT" }
+    ],
+    answer: ["D"],
+    score: 1,
+    analysis: {
+      correct_answer: "D",
+      page_ref: "教材第9页",
+      kb: "教材原文：'DBFOT模式是政府和社会资本合作新机制中唯一具有全寿命期特性的具体实施模式。'",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "BOO不具有全寿命期特性——它不涉及移交，不构成完整的全寿命期循环。" },
+        { key: "B", correct: false, analysis: "TBT不具有全寿命期特性——它是TOT和BOT的组合，不涉及从无到有的建设全过程。" },
+        { key: "C", correct: false, analysis: "ROT不具有全寿命期特性——它是改建-运营-移交，缺少从无到有的建设阶段。" },
+        { key: "D", correct: true,  analysis: "教材原文：'DBFOT模式是政府和社会资本合作新机制中唯一具有全寿命期特性的具体实施模式。'D为正确答案。" }
+      ]
+    }
+  },
+
+  // ===== Q35 (第17页) 单选 =====
+  {
+    id: 35, type: "single",
+    text: "DBFOT模式与BOT模式的区别在于（　）",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "增加了社会资本方的设计和融资权限" },
+      { key: "B", text: "增加了社会资本方的设计和改建权限" },
+      { key: "C", text: "增加了社会资本方的设计和拥有权限" },
+      { key: "D", text: "增加了社会资本方的设计和开发权限" }
+    ],
+    answer: ["C"],
+    score: 1,
+    analysis: {
+      correct_answer: "C",
+      page_ref: "教材第9页",
+      kb: "教材原文：'DBFOT模式...其核心是解决项目设计需求和经济可行性，强调以民营企业降低建设风险、提高公共效率的融资功能。'DBFOT = Design-Build-Finance-Operate-Transfer，相比BOT增加了设计(Design)和拥有(Own)的权限。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "'融资权限'在BOT中已有（Finance），不是DBFOT新增的核心区别。" },
+        { key: "B", correct: false, analysis: "'改建权限'是ROT模式的特点，不是DBFOT与BOT的区别。" },
+        { key: "C", correct: true,  analysis: "DBFOT = Design + Build + Finance + Operate + Transfer，相比标准BOT，增加了设计（Design）和社会资本方的所有权（Own）。C为正确答案。" },
+        { key: "D", correct: false, analysis: "'开发权限'不是教材描述的DBFOT与BOT的核心区别，DBFOT的核心是设计需求和经济可行性。" }
+      ]
+    }
+  },
+
+  // ===== Q36 (第17页) 单选 =====
+  {
+    id: 36, type: "single",
+    text: "TBT模式是将（　）组合起来的一种融资模式",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "TOT、BOT" },
+      { key: "B", text: "TBT、BOO" },
+      { key: "C", text: "BOOT、BOT" },
+      { key: "D", text: "ROT、DBFOT" }
+    ],
+    answer: ["A"],
+    score: 1,
+    analysis: {
+      correct_answer: "A",
+      page_ref: "教材第9页",
+      kb: "教材原文：'TBT是将TOT与BOT组合起来的一种融资模式。'",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文：'TBT是将TOT与BOT组合起来的一种融资模式。'A为正确答案。" },
+        { key: "B", correct: false, analysis: "'TBT、BOO'组合不是教材描述的TBT模式定义。" },
+        { key: "C", correct: false, analysis: "'BOOT、BOT'组合不是教材描述的TBT模式定义。" },
+        { key: "D", correct: false, analysis: "'ROT、DBFOT'组合不是教材描述的TBT模式定义。" }
+      ]
+    }
+  },
+
+  // ===== Q37 (第16-17页) 多选 =====
+  {
+    id: 37, type: "multi",
+    text: "下列关于BOT基本形式说法正确的是（　）",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "与标准BOT相比，BOOT模式，项目公司在特许期内既拥有经营权，又拥有所有权" },
+      { key: "B", text: "标准BOT模式项目公司没有项目的所有权，只有建设和特许经营权" },
+      { key: "C", text: "BOOT的特许期没有BOT的长" },
+      { key: "D", text: "BOO模式项目需移交给政府" },
+      { key: "E", text: "BOOT模式的目的是鼓励项目公司从项目全寿命期角度考虑建设和经营基础设施" }
+    ],
+    answer: ["A", "B", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、B、E",
+      page_ref: "教材第8-9页",
+      kb: "BOT基本形式：标准BOT（建设-运营-移交）、BOOT（建设-拥有-运营-移交）、BOO（建设-拥有-经营）。BOOT在特许期内既拥有经营权又拥有所有权，BOOT特许期比BOT长，BOO不移交。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文：'与标准BOT相比，BOOT在特许期内既拥有经营权，又拥有所有权。'A正确。" },
+        { key: "B", correct: true,  analysis: "标准BOT模式下，项目公司没有项目的所有权，只有建设和特许经营权，届满后移交给政府。B正确。" },
+        { key: "C", correct: false, analysis: "教材原文：'BOOT的特许期要比BOT的长一些。'选项C说'没有BOT的长'与教材相反。C为错误选项。" },
+        { key: "D", correct: false, analysis: "教材原文：'BOO...最终并不将其移交给项目所在国政府。'BOO模式不需要移交给政府。D为错误选项。" },
+        { key: "E", correct: true,  analysis: "教材原文（BOO部分提到）：'采用BOO的目的是鼓励项目公司从项目全寿命期角度考虑建设和经营基础设施，追求全寿命期总成本的降低和效率的提高。'BOOT同样鼓励全寿命期考虑，E正确。" }
+      ]
+    }
+  },
+
+  // ===== Q38 (第17页) 多选 =====
+  {
+    id: 38, type: "multi",
+    text: "DBFOT模式的核心是（　）",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "解决项目设计需求和经济可行性" },
+      { key: "B", text: "追求全寿命期总成本的降低和效率的提高" },
+      { key: "C", text: "获得资金来建设新项目" },
+      { key: "D", text: "强调以民营企业降低建设风险" },
+      { key: "E", text: "提高公共效率的融资功能" }
+    ],
+    answer: ["A", "D", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、D、E",
+      page_ref: "教材第9页",
+      kb: "教材原文：'DBFOT模式...其核心是解决项目设计需求和经济可行性，强调以民营企业降低建设风险、提高公共效率的融资功能。'",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文明确：DBFOT模式的核心是解决项目设计需求和经济可行性。A正确。" },
+        { key: "B", correct: false, analysis: "'追求全寿命期总成本的降低和效率的提高'是BOO模式的目的，不是DBFOT的核心。B不属于DBFOT核心。" },
+        { key: "C", correct: false, analysis: "'获得资金来建设新项目'是TOT模式的目的，不是DBFOT的核心。C不属于DBFOT核心。" },
+        { key: "D", correct: true,  analysis: "教材原文明确：强调以民营企业降低建设风险。D正确。" },
+        { key: "E", correct: true,  analysis: "教材原文明确：提高公共效率的融资功能。E正确。" }
+      ]
+    }
+  },
+
+  // ===== Q39 (第15-16页) 多选 =====
+  {
+    id: 39, type: "multi",
+    text: "下列关于项目后评价说法正确的是（　）",
+    hint: "多选题，正确答案2~4个",
+    opts: [
+      { key: "A", text: "项目后评价是工程全寿命期管理的延伸" },
+      { key: "B", text: "列入后评价年度计划的项目应开展外部评审工作" },
+      { key: "C", text: "项目后评价针对于我国所有在建工程" },
+      { key: "D", text: "项目后评价一般包括定性和定量相结合方法" },
+      { key: "E", text: "重大社会民生项目可列入后评价年度计划中" }
+    ],
+    answer: ["A", "D", "E"],
+    score: 1,
+    analysis: {
+      correct_answer: "A、D、E",
+      page_ref: "教材第7-8页",
+      kb: "教材原文：'项目后评价是工程建设实施阶段管理的延伸''列入后评价年度计划的项目应开展自我总结评价''后评价一般应采用定性和定量相结合的方法''重大社会民生项目'可列入后评价计划。",
+      opts_analysis: [
+        { key: "A", correct: true,  analysis: "教材原文：'项目后评价是工程建设实施阶段管理的延伸。'工程全寿命期包含建设实施阶段，故项目后评价是工程全寿命期管理的延伸。A正确。" },
+        { key: "B", correct: false, analysis: "教材原文：'列入后评价年度计划的项目应开展自我总结评价'，不是外部评审。B说法错误。" },
+        { key: "C", correct: false, analysis: "教材原文：后评价是对'已建成投产的项目'进行评价，针对的是已建成项目，不是所有在建工程。C说法错误。" },
+        { key: "D", correct: true,  analysis: "教材原文：'项目后评价一般应采用定性和定量相结合的方法。'D正确。" },
+        { key: "E", correct: true,  analysis: "教材明确列明：'重大社会民生项目'属于可列入后评价年度计划的项目。E正确。" }
+      ]
+    }
+  },
+
+  // ===== Q40 (第16页) 单选 =====
+  {
+    id: 40, type: "single",
+    text: "BOT正常运作流程是（　）",
+    hint: "单选题",
+    opts: [
+      { key: "A", text: "特许权协议－融资安排－开发建设－项目移交－项目经营" },
+      { key: "B", text: "融资安排－特许权协议－开发建设－项目经营－项目移交" },
+      { key: "C", text: "特许权协议－开发建设－融资安排－项目经营－项目移交" },
+      { key: "D", text: "特许权协议－融资安排－开发建设－项目经营－项目移交" }
+    ],
+    answer: ["D"],
+    score: 1,
+    analysis: {
+      correct_answer: "D",
+      page_ref: "教材第8页",
+      kb: "教材原文BOT流程：A.特许权协议→B.融资安排→C.开发建设→D.项目经营→E.项目移交。",
+      opts_analysis: [
+        { key: "A", correct: false, analysis: "A的流程顺序错误：'项目经营'应在'项目移交'之前，但A整体顺序不对（开发建设→移交→经营是错误的）。A不正确。" },
+        { key: "B", correct: false, analysis: "B的流程顺序错误：'融资安排'应在'特许权协议'之后（以特许权为基础安排融资），而非之前。B不正确。" },
+        { key: "C", correct: false, analysis: "C的流程顺序错误：'融资安排'应在'开发建设'之前（先融资再建设），C将融资放在开发建设之后，顺序不对。C不正确。" },
+        { key: "D", correct: true,  analysis: "教材原文BOT流程：A.特许权协议→B.融资安排→C.开发建设→D.项目经营→E.项目移交。D为正确答案。" }
+      ]
+    }
+  }
+];
+
+const questions = QUESTIONS_40;
+
+// ===================== 断点续做 =====================
+const STORAGE_KEY = 'yijian_quiz_progress_v1';
+
+function saveProgress() {
+  const data = {
+    submitted: submitted,
+    userAnswers: userAnswers.map(a => a ? [...a] : null),
+    totalScore: totalScore,
+    wrongSet: [...wrongSet],
+    currentQ: currentQ,
+    everScored: everScored,
+    savedAt: Date.now()
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch(e) {
+    console.warn('保存进度失败:', e);
+  }
+}
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) {
+    return null;
+  }
+}
+
+function clearProgress() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+function showResumeModal() {
+  const data = loadProgress();
+  if (!data) return;
+
+  const doneCount = data.submitted.filter(Boolean).length;
+  document.getElementById('resumeQNum').textContent = data.currentQ + 1;
+  document.getElementById('resumeDone').textContent = doneCount;
+  document.getElementById('resumeScore').textContent = data.totalScore.toFixed(1);
+  document.getElementById('resumeWrong').textContent = data.wrongSet.length;
+
+  document.getElementById('resumeModal').classList.add('show');
+}
+
+function resumeProgress() {
+  const data = loadProgress();
+  if (!data) {
+    startFresh();
+    return;
+  }
+
+  // 恢复状态
+  submitted = data.submitted;
+  userAnswers = data.userAnswers.map(a => a ? new Set(a) : null);
+  totalScore = data.totalScore;
+  wrongSet = new Set(data.wrongSet);
+  currentQ = data.currentQ;
+  everScored = data.everScored;
+
+  document.getElementById('resumeModal').classList.remove('show');
+  document.getElementById('topResumeBtn').classList.add('show');
+
+  // 不需要重新渲染（renderAll已在初始化时调用），直接恢复状态并跳转
+  goToQuestion(currentQ);
+  updateProgress();
+  updateJumpDropdown();
+}
+
+function startFresh() {
+  clearProgress();
+  document.getElementById('resumeModal').classList.remove('show');
+
+  // 重置所有状态
+  totalScore = 0;
+  submitted = new Array(N).fill(false);
+  userAnswers = new Array(N).fill(null);
+  everScored = new Array(N).fill(false);
+  wrongSet = new Set();
+  isRedoMode = false;
+
+  renderAll();
+  goToQuestion(0);
+  updateProgress();
+  updateJumpDropdown();
+}
+
+// ===================== 全局状态 =====================
+const N = questions.length;
+let totalPossible = questions.reduce((s, q) => s + (q.type === 'multi' ? 2 : 1), 0); // 多选2分，单选1分
+let totalScore = 0;         // 累计得分
+let currentQ = 0;           // 当前题号(0-based)
+let submitted = new Array(N).fill(false);  // 每题是否已提交
+let everScored = new Array(N).fill(false); // 每题是否已计过分（防止重复累加）
+let userAnswers = new Array(N).fill(null); // 每题用户答案(Set)
+let isRedoMode = false;    // 是否错题重做模式
+let wrongSet = new Set();   // 错题题号集合
+let lastRedoIdx = -1;      // 错题重做模式的最后一题索引
+let roundScores = [];       // 每轮结束时累计总分：[第1轮累计, 第2轮累计, ...]
+
+// ===================== DOM 渲染 =====================
+// 事件委托处理函数（只需绑定一次，定义在 renderAll 外）
+function _onMainClick(e) {
+  const optEl = e.target.closest('.opt');
+  if (!optEl) return;
+  const qIdx = parseInt(optEl.dataset.q, 10);
+  const q = questions[qIdx];
+  if (q.type === 'multi') {
+    toggleMulti(optEl, qIdx);
+  } else {
+    selectSingle(optEl, qIdx);
+  }
+}
+
+let _mainClickBound = false;
+
+function renderAll() {
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '';
+
+  // 生成做题页
+  questions.forEach((q, idx) => {
+    const page = document.createElement('div');
+    page.className = 'q-page';
+    page.id = `q-page-${idx}`;
+    page.innerHTML = buildQuestionHTML(q, idx);
+    main.appendChild(page);
+  });
+
+  // 事件委托：只绑定一次，防止多次调用 renderAll 时重复叠加监听器
+  if (!_mainClickBound) {
+    main.addEventListener('click', _onMainClick);
+    _mainClickBound = true;
+  }
+
+  // 生成汇总页
+  const summary = document.createElement('div');
+  summary.className = 'summary-page';
+  summary.id = 'summaryPage';
+  summary.innerHTML = buildSummaryHTML();
+  main.appendChild(summary);
+
+  // 生成下拉选题
+  renderJumpDropdown();
+
+  // 更新跳转下拉中的当前题高亮
+  updateJumpDropdown();
+}
+
+function buildQuestionHTML(q, idx) {
+  const isMulti = q.type === 'multi';
+  const tagClass = isMulti ? 'multi' : 'single';
+  const tagText = isMulti ? '多选题' : '单选题';
+  const optsHTML = q.opts.map(opt => `
+    <div class="opt" data-key="${opt.key}" data-q="${idx}">
+      <span class="letter">${opt.key}.</span>
+      <span class="opt-text">${opt.text}</span>
+    </div>
+  `).join('');
+
+  return `
+    <div class="q-card">
+      <div class="q-meta">
+        <span class="q-tag ${tagClass}">${tagText}</span>
+        <span class="q-num">第 ${idx + 1} / ${N} 题</span>
+        <button class="q-nav-btn q-prev-btn hidden" id="prevBtn-${idx}" onclick="goPrev(${idx})">上一题</button>
+        <button class="q-nav-btn q-confirm-btn" id="confirmBtn-${idx}" disabled onclick="handleConfirm(${idx})">确定</button>
+      </div>
+      <div class="q-text">${q.text}</div>
+      <div class="q-hint">${q.hint}</div>
+      <div class="options" id="opts-${idx}">
+        ${optsHTML}
+      </div>
+
+      <!-- 得分条 -->
+      <div class="score-bar" id="scoreBar-${idx}"></div>
+
+      <!-- 答案解析 -->
+      <div class="analysis" id="analysis-${idx}"></div>
+    </div>
+  `;
+}
+
+function buildSummaryHTML() {
+  return `
+    <div class="summary-icon">📋</div>
+    <div class="summary-title">刷题完成</div>
+    <div class="summary-score" id="summaryScore">0 <span class="total">/ ${totalPossible} 分</span></div>
+    <div class="summary-round-tag" id="summaryRoundTag"></div>
+    <div class="summary-rounds" id="summaryRounds"></div>
+    <div class="summary-msg" id="summaryMsg"></div>
+    <button class="btn-redo" id="btnRedo" onclick="startRedo()">🔁 错题重做</button>
+    <div class="wrong-list-title">❌ 错题列表（共 <span id="wrongCount">0</span> 题）</div>
+    <div class="wrong-list" id="wrongList"></div>
+  `;
+}
+
+// ===================== 选择逻辑 =====================
+// 单选
+function selectSingle(el, qIdx) {
+  if (submitted[qIdx]) return;
+  const container = document.getElementById(`opts-${qIdx}`);
+  container.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  userAnswers[qIdx] = new Set([el.dataset.key]);
+  syncNavBar();
+}
+
+// 多选
+function toggleMulti(el, qIdx) {
+  if (submitted[qIdx]) return;
+  if (!userAnswers[qIdx]) userAnswers[qIdx] = new Set();
+  const key = el.dataset.key;
+  if (userAnswers[qIdx].has(key)) {
+    userAnswers[qIdx].delete(key);
+    el.classList.remove('selected');
+  } else {
+    userAnswers[qIdx].add(key);
+    el.classList.add('selected');
+  }
+  syncNavBar();
+}
+
+// ===================== 确定/下一题/交卷 =====================
+function handleConfirm(qIdx) {
+  if (!submitted[qIdx]) {
+    // 第一次点击 → 提交答案
+    submitAnswer(qIdx);
+  } else {
+    // 已提交 → 跳转下一题或回统计页
+    if (isRedoMode) {
+      const wrongIndices = [...wrongSet].sort((a,b) => a-b);
+      const curPos = wrongIndices.indexOf(qIdx);
+      if (curPos < wrongIndices.length - 1) {
+        // 还有下一道错题 → 导航到下一道错题
+        goToQuestion(wrongIndices[curPos + 1]);
+      } else {
+        // 最后一道错题 → 回统计页（先记录再关闭redo模式）
+        showSummary();
+        isRedoMode = false;
+      }
+    } else {
+      // 正常模式
+      if (qIdx === N - 1) {
+        showSummary();
+      } else {
+        goToQuestion(qIdx + 1);
+      }
+    }
+  }
+}
+
+function submitAnswer(qIdx) {
+  const q = questions[qIdx];
+  const ua = userAnswers[qIdx];
+  if (!ua || ua.size === 0) {
+    alert('请至少选择一个选项');
+    return;
+  }
+
+  submitted[qIdx] = true;  // 本轮已提交
+  const isMulti = q.type === 'multi';
+  const correctSet = new Set(q.answer);
+
+  // 多选判分规则：
+  // 全部选对 → 2分
+  // 选对但不全对（无错选）→ 每选对1个得0.5分
+  // 有任何错选 → 0分
+  let earned;
+  if (isMulti) {
+    const correctCount = [...ua].filter(k => correctSet.has(k)).length;
+    const wrongCount = [...ua].filter(k => !correctSet.has(k)).length;
+    if (wrongCount > 0) {
+      earned = 0; // 有错选，0分
+    } else if (correctCount === correctSet.size) {
+      earned = 2; // 全部选对，2分
+    } else {
+      earned = 0.5 * correctCount; // 部分正确，0.5×选对数
+    }
+  } else {
+    earned = (ua.size === 1 && correctSet.has([...ua][0])) ? 1 : 0;
+  }
+
+  // 只有从未在此题上得过分，才能累加（每题价值只计一次）
+  if (!everScored[qIdx]) {
+    totalScore += earned;
+    if (earned > 0) everScored[qIdx] = true;
+  }
+
+  const fullScore = isMulti ? 2 : 1;
+  if (earned < fullScore) {
+    wrongSet.add(qIdx);
+  } else if (wrongSet.has(qIdx)) {
+    wrongSet.delete(qIdx);
+  }
+
+  // 高亮选项
+  const container = document.getElementById(`opts-${qIdx}`);
+  container.querySelectorAll('.opt').forEach(el => {
+    const key = el.dataset.key;
+    const isCorrect = correctSet.has(key);
+    const isSelected = ua.has(key);
+    el.classList.remove('selected');
+    if (isCorrect && isSelected) {
+      el.classList.add('correct');
+    } else if (!isCorrect && isSelected) {
+      el.classList.add('wrong');
+    } else if (isCorrect && !isSelected) {
+      el.classList.add('unselected-correct');
+    }
+  });
+
+  // 显示得分条
+  const scoreBar = document.getElementById(`scoreBar-${qIdx}`);
+  if (isMulti) {
+    if (earned === 2) {
+      scoreBar.className = 'score-bar show full';
+      scoreBar.textContent = '🎉 完全正确！+2 分';
+    } else if (earned > 0) {
+      scoreBar.className = 'score-bar show partial';
+      scoreBar.textContent = `⚠️ 部分正确！+${earned} 分`;
+    } else {
+      scoreBar.className = 'score-bar show wrong';
+      scoreBar.textContent = '❌ 错误！+0 分';
+    }
+  } else {
+    if (earned === 1) {
+      scoreBar.className = 'score-bar show full';
+      scoreBar.textContent = '✅ 回答正确！+1 分';
+    } else {
+      scoreBar.className = 'score-bar show wrong';
+      scoreBar.textContent = '❌ 回答错误！+0 分';
+    }
+  }
+
+  // 显示解析
+  showAnalysis(qIdx, ua, earned);
+
+  // 更新进度
+  updateProgress();
+  updateJumpDropdown();
+
+  // 同步按钮状态
+  syncNavBar();
+
+  // 保存断点进度
+  saveProgress();
+
+  // 显示顶部恢复按钮
+  document.getElementById('topResumeBtn').classList.add('show');
+}
+
+function showAnalysis(qIdx, ua, earned) {
+  const q = questions[qIdx];
+  const correctSet = new Set(q.answer);
+  const uaArr = [...ua].sort();
+  const caArr = [...correctSet].sort();
+
+  const anaEl = document.getElementById(`analysis-${qIdx}`);
+
+  // 逐选项分析HTML（严格按教材原文标注，忽略用户选择）
+  // "符合题意" = 这个选项在正确答案中（应该被选中）
+  // 无论题目问"选正确的"还是"选错误的"，都以 q.answer 为准
+  const answerSet = new Set(q.answer);
+  const optsHTML = q.analysis.opts_analysis.map(o => {
+    const shouldSelect = answerSet.has(o.key);  // true = 符合题意（应该选）
+    let tagClass, tagText;
+    if (shouldSelect) {
+      tagClass = 'tag-correct'; tagText = '✔ 符合题意';
+    } else {
+      tagClass = 'tag-wrong'; tagText = '✘ 不符合题意';
+    }
+    return `
+      <div class="opt-analysis">
+        <h4>选项 ${o.key} <span class="tag ${tagClass}">${tagText}</span></h4>
+        <p>${o.analysis}</p>
+      </div>
+    `;
+  }).join('');
+
+  anaEl.innerHTML = `
+    <div class="ans-section">
+      <h3>✅ 正确答案</h3>
+      <div class="ca">${q.analysis.correct_answer}</div>
+      <p style="font-size:12px;color:#888;margin-top:4px;">你的答案：${uaArr.join('、')}</p>
+    </div>
+    ${optsHTML}
+    <div class="kb-section">
+      <h3>📖 知识点速览</h3>
+      <p>${q.analysis.kb}</p>
+      <span class="page-ref">📚 ${q.analysis.page_ref}</span>
+    </div>
+  `;
+  anaEl.classList.add('show');
+}
+
+// ===================== 题目内按钮同步 =====================
+function syncNavBar() {
+  const qIdx = currentQ;
+
+  // 同步当前题的上一题按钮（在 .q-meta 行内）
+  const prevBtn = document.getElementById(`prevBtn-${qIdx}`);
+  if (prevBtn) {
+    if (isRedoMode) {
+      const wrongIndices = [...wrongSet].sort((a,b) => a-b);
+      const curPos = wrongIndices.indexOf(qIdx);
+      if (curPos <= 0) {
+        prevBtn.classList.add('hidden');
+      } else {
+        prevBtn.classList.remove('hidden');
+      }
+    } else {
+      if (qIdx === 0) prevBtn.classList.add('hidden');
+      else prevBtn.classList.remove('hidden');
+    }
+  }
+
+  // 同步当前题的确认按钮（在 .q-meta 行内）
+  const confirmBtn = document.getElementById(`confirmBtn-${qIdx}`);
+  if (!confirmBtn) return;
+
+  const isLast = isRedoMode ? (qIdx === lastRedoIdx) : (qIdx === N - 1);
+  if (!submitted[qIdx]) {
+    const hasAnswer = userAnswers[qIdx] && userAnswers[qIdx].size > 0;
+    confirmBtn.disabled = !hasAnswer;
+    confirmBtn.textContent = '确定';
+  } else {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = isLast ? '查看成绩' : '下一题';
+  }
+}
+
+
+// ===================== 恢复已提交题目的显示状态 =====================
+function restoreQuestionState(qIdx) {
+  const q = questions[qIdx];
+  const ua = userAnswers[qIdx];
+  if (!ua || !submitted[qIdx]) return;
+
+  const isMulti = q.type === 'multi';
+  const correctSet = new Set(q.answer);
+
+  // 计算得分（用于显示）
+  let earned;
+  if (isMulti) {
+    const correctCount = [...ua].filter(k => correctSet.has(k)).length;
+    const wrongCount = [...ua].filter(k => !correctSet.has(k)).length;
+    if (wrongCount > 0) {
+      earned = 0;
+    } else if (correctCount === correctSet.size) {
+      earned = 2;
+    } else {
+      earned = 0.5 * correctCount;
+    }
+  } else {
+    earned = (ua.size === 1 && correctSet.has([...ua][0])) ? 1 : 0;
+  }
+
+  // 高亮选项
+  const container = document.getElementById(`opts-${qIdx}`);
+  container.querySelectorAll('.opt').forEach(el => {
+    const key = el.dataset.key;
+    const isCorrect = correctSet.has(key);
+    const isSelected = ua.has(key);
+    el.classList.remove('selected', 'correct', 'wrong', 'unselected-correct');
+    if (isCorrect && isSelected) {
+      el.classList.add('correct');
+    } else if (!isCorrect && isSelected) {
+      el.classList.add('wrong');
+    } else if (isCorrect && !isSelected) {
+      el.classList.add('unselected-correct');
+    }
+  });
+
+  // 显示得分条
+  const scoreBar = document.getElementById(`scoreBar-${qIdx}`);
+  if (isMulti) {
+    if (earned === 2) {
+      scoreBar.className = 'score-bar show full';
+      scoreBar.textContent = '🎉 完全正确！+2 分';
+    } else if (earned > 0) {
+      scoreBar.className = 'score-bar show partial';
+      scoreBar.textContent = `⚠️ 部分正确！+${earned} 分`;
+    } else {
+      scoreBar.className = 'score-bar show wrong';
+      scoreBar.textContent = '❌ 错误！+0 分';
+    }
+  } else {
+    if (earned === 1) {
+      scoreBar.className = 'score-bar show full';
+      scoreBar.textContent = '✅ 回答正确！+1 分';
+    } else {
+      scoreBar.className = 'score-bar show wrong';
+      scoreBar.textContent = '❌ 回答错误！+0 分';
+    }
+  }
+
+  // 显示解析
+  showAnalysis(qIdx, ua, earned);
+}
+
+// ===================== 导航 =====================
+function goToQuestion(idx) {
+  // 隐藏所有做题页和汇总页
+  document.querySelectorAll('.q-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('summaryPage').classList.remove('active');
+
+  // 显示目标题
+  const target = document.getElementById(`q-page-${idx}`);
+  target.classList.add('active');
+  currentQ = idx;
+
+  // 隐藏汇总页显示做题页
+  document.getElementById('summaryPage').style.display = 'none';
+  document.getElementById('mainContent').querySelectorAll('.q-page').forEach(p => p.style.display = '');
+
+  // 如果题目已提交，恢复显示状态（用户答案、得分条、解析）
+  if (submitted[idx]) {
+    restoreQuestionState(idx);
+  }
+
+  syncNavBar();
+  updateJumpDropdown();
+
+  // 滚动到顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goPrev(idx) {
+  if (isRedoMode) {
+    const wrongIndices = [...wrongSet].sort((a,b) => a-b);
+    const curPos = wrongIndices.indexOf(idx);
+    if (curPos > 0) {
+      goToQuestion(wrongIndices[curPos - 1]);
+    }
+  } else {
+    if (idx > 0) goToQuestion(idx - 1);
+  }
+}
+
+// ===================== 汇总页 =====================
+function showSummary() {
+  // 刷题完成，清除保存的进度
+  clearProgress();
+  document.getElementById('topResumeBtn').classList.remove('show');
+
+  // 隐藏所有做题页
+  document.querySelectorAll('.q-page').forEach(p => {
+    p.classList.remove('active');
+    p.style.display = 'none';
+  });
+
+  // 显示汇总页
+  const sp = document.getElementById('summaryPage');
+  sp.classList.add('active');
+  sp.style.display = '';
+
+  // 记录本轮得分
+  roundScores.push(totalScore);
+
+  // 更新得分（显示累计总分）
+  document.getElementById('summaryScore').innerHTML = `${totalScore} <span class="total">/ ${totalPossible} 分</span>`;
+
+  // 错题重做的轮次打标签（正常全量练习不打标签）
+  const tagEl = document.getElementById('summaryRoundTag');
+  if (isRedoMode) {
+    tagEl.textContent = '📌 错题重做';
+    tagEl.style.display = 'inline-block';
+  } else {
+    tagEl.style.display = 'none';
+  }
+
+  // 轮次历史（显示累计总分）
+  const roundsEl = document.getElementById('summaryRounds');
+  if (roundScores.length > 1) {
+    const labels = ['第①轮', '第②轮', '第③轮', '第④轮', '第⑤轮'];
+    roundsEl.innerHTML = roundScores.slice(0, -1).map((s, i) => {
+      return `<div class="round-badge">${labels[i] || ('第' + (i+1) + '轮')}：${s}分</div>`;
+    }).join('');
+  } else {
+    roundsEl.innerHTML = '';
+  }
+
+  const pct = totalScore / totalPossible * 100;
+  let msg = '';
+  if (pct >= 100) msg = '🎉 太棒了！满分通关！';
+  else if (pct >= 66) msg = '👍 表现不错，继续加油！';
+  else msg = '📚 基础薄弱，建议重点复习教材！';
+  document.getElementById('summaryMsg').textContent = msg;
+
+  // 错题列表
+  const wrongCount = wrongSet.size;
+  document.getElementById('wrongCount').textContent = wrongCount;
+
+  if (wrongCount === 0) {
+    document.getElementById('wrongList').innerHTML = '<div class="no-wrong">🎉 太棒了！全部答对，无需重做！</div>';
+    document.getElementById('btnRedo').textContent = '🔁 重新全量练习';
+  } else {
+    document.getElementById('btnRedo').textContent = '🔁 错题重做';
+    const listEl = document.getElementById('wrongList');
+    listEl.innerHTML = [...wrongSet].sort((a,b) => a-b).map(idx => {
+      const q = questions[idx];
+      const tagClass = q.type === 'multi' ? '' : 'single';
+      const tagText = q.type === 'multi' ? '多选题' : '单选题';
+      const optsHTML = q.opts.map(opt => {
+        const isCorrect = new Set(q.answer).has(opt.key);
+        const isSelected = userAnswers[idx] && userAnswers[idx].has(opt.key);
+        let cls = 'opt';
+        if (submitted[idx]) {
+          if (isCorrect && isSelected) cls += ' correct';
+          else if (!isCorrect && isSelected) cls += ' wrong';
+          else if (isCorrect && !isSelected) cls += ' unselected-correct';
+        }
+        return `<div class="${cls}"><span class="letter">${opt.key}.</span><span class="opt-text">${opt.text}</span></div>`;
+      }).join('');
+
+      return `
+        <div class="wrong-item" id="wrong-item-${idx}" onclick="toggleWrongItem(${idx})">
+          <div class="wrong-item-header">
+            <span class="wrong-item-num">❌ 第 ${idx + 1} 题</span>
+            <span class="wrong-item-tag ${tagClass}">${tagText}</span>
+          </div>
+          <div class="wrong-item-text">${q.text}</div>
+          <div class="wrong-item-detail" id="wrong-detail-${idx}">
+            <div class="q-text">${q.text}</div>
+            <div class="options">${optsHTML}</div>
+            <div class="wrong-item-ans">
+              <p>正确答案：<span class="ca">${q.analysis.correct_answer}</span></p>
+              <p>你的答案：${userAnswers[idx] ? [...userAnswers[idx]].sort().join('、') : '未作答'}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleWrongItem(idx) {
+  const detail = document.getElementById(`wrong-detail-${idx}`);
+  detail.classList.toggle('show');
+}
+
+// ===================== 错题重做 =====================
+function startRedo() {
+  const wrongIndices = [...wrongSet].sort((a,b) => a-b);
+
+  // 重置状态
+  if (wrongIndices.length > 0) {
+    // 错题重做模式：只重做错题
+    isRedoMode = true;
+    lastRedoIdx = wrongIndices[wrongIndices.length - 1];
+    wrongIndices.forEach(idx => {
+      submitted[idx] = false;
+      userAnswers[idx] = null;
+    });
+
+    // 隐藏汇总页
+    document.getElementById('summaryPage').classList.remove('active');
+    document.getElementById('summaryPage').style.display = 'none';
+    document.querySelectorAll('.q-page').forEach(p => {
+      p.classList.remove('active');
+      p.style.display = 'none';
+    });
+
+    // 清除所有题的答案状态（让Q1/Q2/Q3全部恢复干净）
+    questions.forEach((_, idx) => resetQuestionUI(idx));
+
+    // 显示第一道错题
+    currentQ = wrongIndices[0];
+    const target = document.getElementById(`q-page-${wrongIndices[0]}`);
+    target.style.display = '';
+    target.classList.add('active');
+    syncNavBar();
+
+    // 进入重做时，关闭所有错题详情的展开状态
+    document.querySelectorAll('.wrong-item-detail').forEach(el => el.classList.remove('show'));
+
+  } else {
+    // 全量重做模式：重置所有题，重新开始（清空所有计分状态）
+    isRedoMode = false;
+    totalScore = 0;
+    submitted = new Array(N).fill(false);
+    userAnswers = new Array(N).fill(null);
+    everScored = new Array(N).fill(false);
+    wrongSet = new Set();
+
+    // 隐藏汇总页
+    document.getElementById('summaryPage').classList.remove('active');
+    document.getElementById('summaryPage').style.display = 'none';
+    document.querySelectorAll('.q-page').forEach(p => {
+      p.classList.remove('active');
+      p.style.display = '';
+    });
+
+    questions.forEach((_, idx) => resetQuestionUI(idx));
+    goToQuestion(0);
+  }
+
+  updateProgress();
+  updateJumpDropdown();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetQuestionUI(idx) {
+  const container = document.getElementById(`opts-${idx}`);
+  container.querySelectorAll('.opt').forEach(el => {
+    el.classList.remove('selected', 'correct', 'wrong', 'unselected-correct');
+  });
+
+  document.getElementById(`scoreBar-${idx}`).className = 'score-bar';
+  document.getElementById(`analysis-${idx}`).classList.remove('show');
+  document.getElementById(`analysis-${idx}`).innerHTML = '';
+}
+
+// ===================== 进度 & 下拉 =====================
+function updateProgress() {
+  const scoreEl = document.getElementById('scoreDisplay');
+  const fillEl = document.getElementById('progressFill');
+
+  scoreEl.textContent = totalScore.toFixed(1);
+
+  const pct = Math.min(100, (totalScore / totalPossible) * 100);
+  fillEl.style.width = pct + '%';
+}
+
+function renderJumpDropdown() {
+  const dd = document.getElementById('jumpDropdown');
+  dd.innerHTML = questions.map((q, idx) => {
+    const cls = submitted[idx] ? (wrongSet.has(idx) ? 'wrong' : 'done') : 'todo';
+    return `<div class="jump-item ${cls}" onclick="jumpTo(${idx})">${idx + 1}</div>`;
+  }).join('');
+}
+
+function updateJumpDropdown() {
+  const dd = document.getElementById('jumpDropdown');
+  const items = dd.querySelectorAll('.jump-item');
+  items.forEach((el, idx) => {
+    el.classList.remove('current', 'done', 'wrong', 'todo');
+    if (idx === currentQ) {
+      el.classList.add('current');
+    } else if (submitted[idx]) {
+      el.classList.add(wrongSet.has(idx) ? 'wrong' : 'done');
+    } else {
+      el.classList.add('todo');
+    }
+  });
+}
+
+function toggleJump() {
+  const btn = document.getElementById('jumpBtn');
+  const dd = document.getElementById('jumpDropdown');
+  btn.classList.toggle('open');
+  dd.classList.toggle('show');
+  updateJumpDropdown();
+}
+
+// 点击外部关闭下拉
+document.addEventListener('click', function(e) {
+  const btn = document.getElementById('jumpBtn');
+  const dd = document.getElementById('jumpDropdown');
+  if (!btn.contains(e.target) && !dd.contains(e.target)) {
+    btn.classList.remove('open');
+    dd.classList.remove('show');
+  }
+});
+
+function jumpTo(idx) {
+  goToQuestion(idx);
+  document.getElementById('jumpBtn').classList.remove('open');
+  document.getElementById('jumpDropdown').classList.remove('show');
+}
+
+// ===================== 初始化 =====================
+
+// 处理浏览器 bfcache（后退缓存）恢复：
+// 当页面从 bfcache 中恢复时，JS 状态会被还原，但 _mainClickBound 可能已为 true，
+// 而 mainContent 上的监听器却随 bfcache 的节点一起消失了，需要重新绑定。
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) {
+    // 从 bfcache 恢复，强制重新绑定事件
+    _mainClickBound = false;
+    const main = document.getElementById('mainContent');
+    if (main) {
+      main.removeEventListener('click', _onMainClick); // 先移除（防万一）
+      main.addEventListener('click', _onMainClick);
+      _mainClickBound = true;
+    }
+  }
+});
+
+renderAll();
+
+// 检测是否有保存的进度
+const savedData = loadProgress();
+if (savedData && savedData.submitted.some(Boolean)) {
+  // 有未完成的进度，显示恢复模态框
+  showResumeModal();
+} else {
+  // 无进度，直接开始
+  goToQuestion(0);
+}
+</script>
+</body>
+</html>

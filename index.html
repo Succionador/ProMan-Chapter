@@ -251,6 +251,81 @@
     color: var(--text-dim);
   }
 
+  /* ===== 子菜单样式 ===== */
+  .sub-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    margin-top: 8px;
+    z-index: 50;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .sub-menu.show {
+    display: block;
+    animation: fadeInSub 0.2s ease;
+  }
+
+  @keyframes fadeInSub {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .sub-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.15s;
+    margin-bottom: 4px;
+  }
+
+  .sub-menu-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .sub-menu-item:hover {
+    background: rgba(74, 158, 255, 0.12);
+    color: var(--primary);
+  }
+
+  .sub-menu-icon {
+    font-size: 18px;
+    margin-right: 10px;
+  }
+
+  .sub-menu-text {
+    flex: 1;
+  }
+
+  .sub-menu-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .sub-menu-desc {
+    font-size: 11px;
+    color: var(--text-light);
+  }
+
+  .sub-menu-arrow {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .chapter-card.has-sub {
+    position: relative;
+  }
+
   /* ===== 特色功能 ===== */
   .features-section {
     max-width: 900px;
@@ -430,16 +505,34 @@
   <div class="section-label">📋 章节索引</div>
   <div class="chapters-grid">
 
-    <!-- 第一章 · 已上线 -->
-    <a class="chapter-card" href="./Cha01.html">
+    <!-- 第一章 · 已上线（双轮次） -->
+    <div class="chapter-card has-sub" id="ch1Card" onclick="toggleCh1Sub(event)">
       <div class="card-top">
         <div class="chapter-num active">01</div>
         <div class="status-pill active">✅ 已上线</div>
       </div>
       <div class="chapter-title">建设工程项目组织、规划与控制</div>
-      <div class="chapter-meta">第1章 · 已上线 40 题</div>
-      <div class="chapter-arrow">→</div>
-    </a>
+      <div class="chapter-meta">第1章 · 已上线 80 题（双轮次）</div>
+      <div class="chapter-arrow">▼</div>
+      <div class="sub-menu" id="ch1SubMenu">
+        <a class="sub-menu-item" href="./Cha01.html">
+          <span class="sub-menu-icon">📝</span>
+          <div class="sub-menu-text">
+            <div class="sub-menu-title">第一轮 · Q1-40</div>
+            <div class="sub-menu-desc">基础巩固 · 40题</div>
+          </div>
+          <span class="sub-menu-arrow">→</span>
+        </a>
+        <a class="sub-menu-item" href="./Cha02.html">
+          <span class="sub-menu-icon">📚</span>
+          <div class="sub-menu-text">
+            <div class="sub-menu-title">第二轮 · Q41-80</div>
+            <div class="sub-menu-desc">强化提升 · 40题</div>
+          </div>
+          <span class="sub-menu-arrow">→</span>
+        </a>
+      </div>
+    </div>
 
     <!-- 第二章 -->
     <div class="chapter-card locked">
@@ -575,6 +668,42 @@
   <p>2026 一建《建设工程项目管理》交互刷题系统</p>
   <p style="margin-top:4px;">基于中国建筑工业出版社教材原文编写 · 全10章陆续上线中</p>
 </div>
+
+<script>
+  // ===== 第一章子菜单切换 =====
+  let ch1SubOpen = false;
+
+  function toggleCh1Sub(e) {
+    // 子菜单项点击不触发，防止冒泡
+    if (e.target.closest('.sub-menu-item')) return;
+    
+    ch1SubOpen = !ch1SubOpen;
+    const menu = document.getElementById('ch1SubMenu');
+    const card = document.getElementById('ch1Card');
+    
+    if (ch1SubOpen) {
+      menu.classList.add('show');
+      card.style.zIndex = '60';
+    } else {
+      menu.classList.remove('show');
+      card.style.zIndex = '';
+    }
+  }
+
+  // 点击页面其他地方关闭子菜单
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#ch1Card') && ch1SubOpen) {
+      document.getElementById('ch1SubMenu').classList.remove('show');
+      document.getElementById('ch1Card').style.zIndex = '';
+      ch1SubOpen = false;
+    }
+  });
+
+  // 阻止子菜单内部点击冒泡
+  document.getElementById('ch1SubMenu').addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+</script>
 
 </body>
 </html>
